@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
+from dotenv import load_dotenv
 import os
 
 """
@@ -12,6 +13,7 @@ Application Factory Pattern— es el estándar recomendado por Flask en proyecto
 """
 def create_app():
     app = Flask(__name__)
+    load_dotenv()
 
     # Configuración base
     # La utiliza internamente Flask para firmar y proteger datos sensibles (cookies, tokens, etc.)
