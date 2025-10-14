@@ -1,6 +1,6 @@
 from src import db
 from src.models import Usuario, UsuarioRol
-from werkzeug.security import generate_password_hash
+from src.utils.hash_utils import hash_password, check_password_hash
 
 
 class UserService:
@@ -17,7 +17,7 @@ class UserService:
             raise ValueError(f"Rol '{rol_nombre}' no encontrado en la base de datos")
         
         # Hasheo de la contraseña
-        hashed_password = generate_password_hash(data["contrasenia"])
+        hashed_password = hash_password(data["contrasenia"])
 
         new_user = Usuario(
             nombre_completo=data["nombre_completo"],
@@ -36,3 +36,22 @@ class UserService:
         db.session.refresh(new_user, ['rol'])
 
         return new_user
+
+
+    @staticmethod
+    def login_user(data) -> Usuario:
+        """
+        Inicia sesión de un usuario.
+        """
+        user = Usuario.query.filter_by(mail=data["mail"]).first()
+
+        if not user or not user.activo:
+            raise ValueError("Usuario no encontrado")
+
+        if not check_password_hash(user.hash_password, data["contrasenia"]):
+            raise ValueError("Contraseña incorrecta")
+
+        # Carga la relación del rol para poder acceder al nombre
+        db.session.refresh(user, ['rol'])
+        
+        return user

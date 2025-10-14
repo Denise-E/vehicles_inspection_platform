@@ -18,3 +18,7 @@ class UserResponse(BaseModel):
     telefono: str | None
     rol: str
     activo: bool
+
+class UserLoginRequest(BaseModel):
+    mail: EmailStr
+    contrasenia: constr(min_length=6)

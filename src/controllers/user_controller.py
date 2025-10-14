@@ -1,5 +1,5 @@
 from src.services.user_service import UserService
-from src.schemas.user_schema import UserRegisterRequest, UserResponse
+from src.schemas.user_schema import UserRegisterRequest, UserResponse, UserLoginRequest
 from flask import request, jsonify
 
 
@@ -24,5 +24,29 @@ def register_user():
         response = UserResponse(**response_data)
         return jsonify(response.model_dump()), 201
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+def login_user():
+    try:
+        # Valida request body con Pydantic
+        data = UserLoginRequest(**request.json)
+        
+        user = UserService.login_user(data.model_dump())
+        
+        response_data = {
+            "id": user.id,
+            "nombre_completo": user.nombre_completo,
+            "mail": user.mail,
+            "telefono": user.telefono,
+            "rol": user.rol.nombre, 
+            "activo": user.activo
+        }
+        
+        # Valida response body con Pydantic
+        response = UserResponse(**response_data)
+        return jsonify(response.model_dump()), 200
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 400
