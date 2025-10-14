@@ -1,5 +1,5 @@
 from src.services.user_service import UserService
-from src.schemas.user_schema import UserRegisterRequest, UserResponse, UserLoginRequest
+from src.schemas.user_schemas import UserRegisterRequest, UserResponse, UserLoginRequest
 from flask import request, jsonify
 
 
