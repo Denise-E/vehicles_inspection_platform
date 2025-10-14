@@ -50,3 +50,23 @@ def login_user():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
+def get_user_profile(user_id):
+    try:
+        user = UserService.get_user_profile(user_id)
+
+        response_data = {
+            "id": user.id,
+            "nombre_completo": user.nombre_completo,
+            "mail": user.mail,
+            "telefono": user.telefono,
+            "rol": user.rol.nombre, 
+            "activo": user.activo
+        }
+        
+        # Valida response body con Pydantic
+        response = UserResponse(**response_data)
+        return jsonify(response.model_dump()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400

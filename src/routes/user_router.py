@@ -1,6 +1,6 @@
 from flask import Blueprint
 
-from src.controllers.user_controller import register_user, login_user
+from src.controllers.user_controller import register_user, login_user, get_user_profile
 
 users = Blueprint('users', __name__)
 
@@ -17,4 +17,4 @@ def login():
 @users.route("/profile/<int:user_id>", methods=['GET'])
 # Get user profile by id
 def profile(user_id):
-    return {"msg": 'User profile!'}, 200
+    return get_user_profile(user_id)

@@ -55,3 +55,16 @@ class UserService:
         db.session.refresh(user, ['rol'])
         
         return user
+
+    @staticmethod
+    def get_user_profile(user_id) -> Usuario:
+        """
+        Obtiene el perfil de un usuario.
+        """
+        user = Usuario.query.filter_by(id=user_id).first()
+
+        if not user:
+            raise ValueError("Usuario no encontrado")
+
+        db.session.refresh(user, ['rol'])
+        return user
