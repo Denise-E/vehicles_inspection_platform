@@ -18,6 +18,8 @@ def create_app():
     # Configuración base
     # La utiliza internamente Flask para firmar y proteger datos sensibles (cookies, tokens, etc.)
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+
     # Configuración de CORS para permitir peticiones desde cualquier origen. Configuración lista para su uso a futuro. 
     CORS(app, resources={r"/*": {"origins": "*"}})
 
