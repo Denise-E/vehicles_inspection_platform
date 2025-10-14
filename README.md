@@ -60,6 +60,32 @@ Para que el servidor recargue automáticamente cuando se realicen cambios en el 
 flask run --reload
 ```
 
+## Ejecutar Tests
+
+El proyecto incluye tests unitarios para asegurar la calidad del código. Los tests están ubicados en la carpeta `src/tests/`.
+
+### Ejecutar todos los tests
+
+```bash
+pytest src/tests/ -v
+```
+
+### Ejecutar tests de un módulo específico
+
+Ejemplo para ejecutar solo los tests de usuarios:
+
+```bash
+pytest src/tests/users_unit_tests.py -v
+```
+
+Para el resto de los tests simplemente se debe mencionar al archivo correspondiente que se desea correr.
+
+### Ejecutar un test específico
+
+```bash
+pytest src/tests/users_unit_tests.py::test_register_user_success -v
+```
+
 ### Documentación
 
 La documentación del proyecto está disponible en la ruta /swagger. Puedes acceder a ella navegando a http://localhost:5000/swagger una vez que el servidor esté en funcionamiento.
