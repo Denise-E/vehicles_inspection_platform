@@ -8,7 +8,7 @@ from src.models.user_model import Usuario
 from src.models.vehicle_model import Vehiculo
 from src.models.booking_model import Turno
 from src.models.inspection_model import Inspeccion
-from src.models.chequeo_model import Chequeo
+from src.models.verification_model import Chequeo
 
 from src.models.user_rol_model import UsuarioRol
 from src.models.booking_state_model import EstadoTurno

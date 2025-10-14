@@ -1,12 +1,14 @@
 from flask import Blueprint
 
+from src.controllers.user_controller import register_user
+
 users = Blueprint('users', __name__)
 
 # Users routes TODO: Define user model
-@users.route("/register", methods=['POST']) 
+@users.route("/register", methods=["POST"])
 # Register a new user
 def register():
-    return {"msg": 'User registered!'}, 200
+    return register_user()
 
 @users.route("/login", methods=['POST'])
 # Login a user

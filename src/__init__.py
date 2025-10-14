@@ -1,6 +1,8 @@
 from flask import Flask
 from flask_cors import CORS
 from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 import os
 
 """
@@ -11,6 +13,14 @@ Application Factory Pattern— es el estándar recomendado por Flask en proyecto
 - Permite crear la app desde fuera sin dependencias circulares.
 
 """
+
+# ===========================================================
+# Inicialización global de extensiones
+# ===========================================================
+db = SQLAlchemy()
+migrate = Migrate()
+
+
 def create_app():
     app = Flask(__name__)
     load_dotenv()

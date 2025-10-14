@@ -46,7 +46,7 @@ pip install -r requirements.txt
 ### Paso 1: Navegar al Directorio del Proyecto
 
 ```bash
-cd ruta/Natural_Language_Processing_TramitesAI
+cd ruta/vehicles_inspection_platform
 ```
 
 ### Paso 2: Levantar el proyecto de Flask
