@@ -11,8 +11,17 @@ def register_user():
         # Crea usuario en la base de datos
         user = UserService.create_user(data.model_dump())
 
-        # Convierte a esquema de respuesta
-        response = UserResponse.model_validate(user)
+        response_data = {
+            "id": user.id,
+            "nombre_completo": user.nombre_completo,
+            "mail": user.mail,
+            "telefono": user.telefono,
+            "rol": user.rol.nombre,  # Accede al nombre del rol desde la relación
+            "activo": user.activo
+        }
+        
+        # Valida response body con Pydantic
+        response = UserResponse(**response_data)
         return jsonify(response.model_dump()), 201
 
     except Exception as e:

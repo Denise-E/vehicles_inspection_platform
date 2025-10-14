@@ -5,8 +5,8 @@ class UserRegisterRequest(BaseModel):
     nombre_completo: constr(min_length=3)
     mail: EmailStr
     telefono: constr(min_length=6, max_length=20) | None = None
-    password: constr(min_length=6)
-    rol_id: int
+    contrasenia: constr(min_length=6)
+    rol: str
 
 # Response schema
 class UserResponse(BaseModel):
@@ -16,5 +16,5 @@ class UserResponse(BaseModel):
     nombre_completo: str
     mail: EmailStr
     telefono: str | None
-    rol_id: int
+    rol: str
     activo: bool
