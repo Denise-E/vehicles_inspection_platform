@@ -14,9 +14,6 @@ Application Factory Pattern— es el estándar recomendado por Flask en proyecto
 
 """
 
-# ===========================================================
-# Inicialización global de extensiones
-# ===========================================================
 db = SQLAlchemy()
 migrate = Migrate()
 
@@ -32,6 +29,10 @@ def create_app():
 
     # Configuración de CORS para permitir peticiones desde cualquier origen. Configuración lista para su uso a futuro. 
     CORS(app, resources={r"/*": {"origins": "*"}})
+
+    # Inicializar extensiones con la aplicación
+    db.init_app(app)
+    migrate.init_app(app, db)
 
     # Routers
     from src.routes.user_router import users

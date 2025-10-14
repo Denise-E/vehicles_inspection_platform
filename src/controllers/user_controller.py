@@ -9,11 +9,11 @@ def register_user():
         data = UserRegisterRequest(**request.json)
 
         # Crea usuario en la base de datos
-        user = UserService.create_user(data.dict())
+        user = UserService.create_user(data.model_dump())
 
         # Convierte a esquema de respuesta
-        response = UserResponse.from_orm(user)
-        return jsonify(response.dict()), 201
+        response = UserResponse.model_validate(user)
+        return jsonify(response.model_dump()), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, constr
+from pydantic import BaseModel, EmailStr, constr, ConfigDict
 
 # Request schema
 class UserRegisterRequest(BaseModel):
@@ -10,12 +10,11 @@ class UserRegisterRequest(BaseModel):
 
 # Response schema
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     nombre_completo: str
     mail: EmailStr
     telefono: str | None
     rol_id: int
     activo: bool
-
-    class Config:
-        orm_mode = True  # Permite convertir objetos SQLAlchemy directamente
