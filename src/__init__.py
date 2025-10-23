@@ -1,8 +1,9 @@
-from flask import Flask
+from flask import Flask, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_swagger import swagger
 import os
 
 """
@@ -49,6 +50,55 @@ def create_app():
     # Health check
     @app.route("/api/health", methods=['GET'])
     def health():
+        """
+        Health check endpoint
+        ---
+        tags:
+          - Health
+        responses:
+          200:
+            description: API está funcionando correctamente
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: App running!
+        """
         return {"msg": "App running!"}, 200
+
+    # Swagger endpoint - JSON spec
+    @app.route("/swagger")
+    def swagger_spec():
+        """
+        Genera la especificación Swagger/OpenAPI de la API en formato JSON
+        """
+        swag = swagger(app)
+        swag['info']['version'] = "1.0"
+        swag['info']['title'] = "Vehicle Inspection Platform API"
+        swag['info']['description'] = "API para sistema de control de inspección vehicular - Proyecto universitario TAP 2025"
+        swag['host'] = "localhost:5000"
+        swag['basePath'] = "/"
+        swag['schemes'] = ["http"]
+        
+        # Configuración de seguridad JWT
+        swag['securityDefinitions'] = {
+            'Bearer': {
+                'type': 'apiKey',
+                'name': 'Authorization',
+                'in': 'header',
+                'description': 'JWT Bearer token. Formato: "Bearer {token}"'
+            }
+        }
+        
+        return jsonify(swag)
+
+    # Swagger UI - Interfaz visual
+    @app.route("/docs")
+    def swagger_ui():
+        """
+        Interfaz visual de Swagger UI para explorar y probar la API
+        """
+        return render_template('swagger.html')
 
     return app
