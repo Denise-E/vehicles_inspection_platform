@@ -1,6 +1,7 @@
 from src.services.vehicle_service import VehicleService
 from src.schemas.vehicle_schemas import (
     VehicleRegisterRequest,
+    VehicleUpdateRequest,
     VehicleResponse,
     VehicleDetailResponse,
     VehicleListResponse
@@ -110,6 +111,77 @@ def list_all_vehicles() -> Tuple[dict, int]:
         
         # Validar response con Pydantic
         response = VehicleListResponse(**response_data)
+        return jsonify(response.model_dump()), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+def update_vehicle(matricula: str) -> Tuple[dict, int]:
+    """
+    Actualiza un vehículo existente.
+    
+    Args:
+        matricula: Matrícula del vehículo
+        
+    Returns:
+        Tuple con (response_json, status_code)
+    """
+    try:
+        # Validar request con Pydantic
+        data = VehicleUpdateRequest(**request.json)
+        
+        # Actualizar vehículo
+        vehicle = VehicleService.update_vehicle(matricula, data.model_dump())
+        
+        # Preparar response
+        response_data = {
+            "id": vehicle.id,
+            "matricula": vehicle.matricula,
+            "marca": vehicle.marca,
+            "modelo": vehicle.modelo,
+            "anio": vehicle.anio,
+            "estado": vehicle.estado.nombre,
+            "duenio_id": vehicle.duenio_id,
+            "nombre_duenio": vehicle.duenio.nombre_completo
+        }
+        
+        # Validar response con Pydantic
+        response = VehicleDetailResponse(**response_data)
+        return jsonify(response.model_dump()), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+def delete_vehicle(matricula: str) -> Tuple[dict, int]:
+    """
+    Elimina un vehículo (soft delete - cambia estado a INACTIVO).
+    
+    Args:
+        matricula: Matrícula del vehículo
+        
+    Returns:
+        Tuple con (response_json, status_code)
+    """
+    try:
+        # Eliminar vehículo (soft delete)
+        vehicle = VehicleService.delete_vehicle(matricula)
+        
+        # Preparar response
+        response_data = {
+            "id": vehicle.id,
+            "matricula": vehicle.matricula,
+            "marca": vehicle.marca,
+            "modelo": vehicle.modelo,
+            "anio": vehicle.anio,
+            "estado": vehicle.estado.nombre,
+            "duenio_id": vehicle.duenio_id,
+            "nombre_duenio": vehicle.duenio.nombre_completo
+        }
+        
+        # Validar response con Pydantic
+        response = VehicleDetailResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
     except Exception as e:

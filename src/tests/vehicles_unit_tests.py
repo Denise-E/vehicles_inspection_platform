@@ -209,3 +209,306 @@ def test_register_vehicle_user_with_inspector_role(client, app):
         assert 'error' in response_data
         assert "no puede registrar" in response_data['error'].lower()
 
+
+# ========================================
+# TESTS PARA /api/vehicles/{matricula} (GET - Profile)
+# ========================================
+
+def test_get_vehicle_profile_success(client, app):
+    """Test: Obtener perfil de vehículo exitosamente"""
+    with app.app_context():
+        # Crear usuario y vehículo
+        rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        user = Usuario(
+            nombre_completo="Carlos Martinez",
+            mail="carlos@example.com",
+            telefono="333444555",
+            hash_password=hash_password("password123"),
+            rol_id=rol.id,
+            activo=True
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehicle = Vehiculo(
+            matricula="GET123",
+            marca="Honda",
+            modelo="Civic",
+            anio=2020,
+            duenio_id=user.id,
+            estado_id=estado.id
+        )
+        db.session.add(vehicle)
+        db.session.commit()
+        
+        # Obtener perfil
+        response = client.get('/api/vehicles/profile/GET123')
+        
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert response_data['matricula'] == "GET123"
+        assert response_data['marca'] == "Honda"
+        assert response_data['nombre_duenio'] == "Carlos Martinez"
+
+
+def test_get_vehicle_profile_not_found(client, app):
+    """Test: Obtener perfil falla con vehículo no existente"""
+    with app.app_context():
+        response = client.get('/api/vehicles/profile/NOEXISTE')
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+# ========================================
+# TESTS PARA /api/vehicles (GET - List all)
+# ========================================
+
+def test_list_all_vehicles_success(client, app):
+    """Test: Listar todos los vehículos exitosamente"""
+    with app.app_context():
+        # Crear usuarios y vehículos
+        rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        user1 = Usuario(
+            nombre_completo="Luis Hernandez",
+            mail="luis@example.com",
+            telefono="666777888",
+            hash_password=hash_password("password123"),
+            rol_id=rol.id,
+            activo=True
+        )
+        user2 = Usuario(
+            nombre_completo="Ana Garcia",
+            mail="ana@example.com",
+            telefono="999000111",
+            hash_password=hash_password("password123"),
+            rol_id=rol.id,
+            activo=True
+        )
+        db.session.add_all([user1, user2])
+        db.session.commit()
+        
+        estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehicle1 = Vehiculo(
+            matricula="LST001",
+            marca="Nissan",
+            modelo="Sentra",
+            anio=2019,
+            duenio_id=user1.id,
+            estado_id=estado.id
+        )
+        vehicle2 = Vehiculo(
+            matricula="LST002",
+            marca="Mazda",
+            modelo="3",
+            anio=2021,
+            duenio_id=user2.id,
+            estado_id=estado.id
+        )
+        db.session.add_all([vehicle1, vehicle2])
+        db.session.commit()
+        
+        # Listar vehículos
+        response = client.get('/api/vehicles')
+        
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert 'vehiculos' in response_data
+        assert 'total' in response_data
+        assert response_data['total'] >= 2
+
+
+# ========================================
+# TESTS PARA /api/vehicles/{matricula} (PUT - Update)
+# ========================================
+
+def test_update_vehicle_success(client, app):
+    """Test: Actualizar vehículo exitosamente"""
+    with app.app_context():
+        # Crear usuario y vehículo
+        rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        user = Usuario(
+            nombre_completo="Roberto Silva",
+            mail="roberto@example.com",
+            telefono="222333444",
+            hash_password=hash_password("password123"),
+            rol_id=rol.id,
+            activo=True
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehicle = Vehiculo(
+            matricula="UPD123",
+            marca="Volkswagen",
+            modelo="Golf",
+            anio=2018,
+            duenio_id=user.id,
+            estado_id=estado.id
+        )
+        db.session.add(vehicle)
+        db.session.commit()
+        
+        # Actualizar vehículo
+        data = {
+            "marca": "Volkswagen",
+            "modelo": "Jetta",
+            "anio": 2020
+        }
+        
+        response = client.put('/api/vehicles/UPD123', json=data)
+        
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert response_data['matricula'] == "UPD123"
+        assert response_data['modelo'] == "Jetta"
+        assert response_data['anio'] == 2020
+
+
+def test_update_vehicle_not_found(client, app):
+    """Test: Actualizar vehículo falla con matrícula no existente"""
+    with app.app_context():
+        data = {
+            "marca": "Tesla",
+            "modelo": "Model 3",
+            "anio": 2023
+        }
+        
+        response = client.put('/api/vehicles/NOEXISTE', json=data)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_update_vehicle_invalid_year(client, app):
+    """Test: Actualizar vehículo falla con año inválido"""
+    with app.app_context():
+        # Crear usuario y vehículo
+        rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        user = Usuario(
+            nombre_completo="Valeria Torres",
+            mail="valeria@example.com",
+            telefono="555666777",
+            hash_password=hash_password("password123"),
+            rol_id=rol.id,
+            activo=True
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehicle = Vehiculo(
+            matricula="INV456",
+            marca="Fiat",
+            modelo="Punto",
+            anio=2017,
+            duenio_id=user.id,
+            estado_id=estado.id
+        )
+        db.session.add(vehicle)
+        db.session.commit()
+        
+        # Intentar actualizar con año inválido
+        data = {
+            "marca": "Fiat",
+            "modelo": "500",
+            "anio": 1850  # Año inválido
+        }
+        
+        response = client.put('/api/vehicles/INV456', json=data)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+# ========================================
+# TESTS PARA /api/vehicles/{matricula}/desactivar (PATCH - Soft delete)
+# ========================================
+
+def test_delete_vehicle_success(client, app):
+    """Test: Desactivar vehículo exitosamente (soft delete con PATCH)"""
+    with app.app_context():
+        # Crear usuario y vehículo
+        rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        user = Usuario(
+            nombre_completo="Diego Ramirez",
+            mail="diego@example.com",
+            telefono="777888999",
+            hash_password=hash_password("password123"),
+            rol_id=rol.id,
+            activo=True
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehicle = Vehiculo(
+            matricula="DEL789",
+            marca="Peugeot",
+            modelo="208",
+            anio=2019,
+            duenio_id=user.id,
+            estado_id=estado.id
+        )
+        db.session.add(vehicle)
+        db.session.commit()
+        
+        # Desactivar vehículo con PATCH
+        response = client.patch('/api/vehicles/DEL789/desactivar')
+        
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert response_data['matricula'] == "DEL789"
+        assert response_data['estado'] == "INACTIVO"
+
+
+def test_delete_vehicle_not_found(client, app):
+    """Test: Desactivar vehículo falla con matrícula no existente"""
+    with app.app_context():
+        response = client.patch('/api/vehicles/NOEXISTE/desactivar')
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_delete_vehicle_already_inactive(client, app):
+    """Test: Desactivar vehículo falla si ya está inactivo"""
+    with app.app_context():
+        # Crear usuario y vehículo INACTIVO
+        rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        user = Usuario(
+            nombre_completo="Sofia Perez",
+            mail="sofia@example.com",
+            telefono="888999000",
+            hash_password=hash_password("password123"),
+            rol_id=rol.id,
+            activo=True
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        estado_inactivo = EstadoVehiculo.query.filter_by(nombre='INACTIVO').first()
+        vehicle = Vehiculo(
+            matricula="INA999",
+            marca="Renault",
+            modelo="Clio",
+            anio=2016,
+            duenio_id=user.id,
+            estado_id=estado_inactivo.id
+        )
+        db.session.add(vehicle)
+        db.session.commit()
+        
+        # Intentar desactivar vehículo ya inactivo con PATCH
+        response = client.patch('/api/vehicles/INA999/desactivar')
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+        assert "ya está inactivo" in response_data['error']
