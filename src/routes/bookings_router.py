@@ -1,34 +1,88 @@
 from flask import Blueprint
+from src.controllers.booking_controller import (
+    consultar_disponibilidad,
+    reservar_turno,
+    confirmar_turno,
+    cancelar_turno,
+    obtener_turno,
+    listar_turnos_por_usuario,
+    listar_turnos_por_vehiculo,
+    listar_todos_los_turnos
+)
 
 bookings = Blueprint('bookings', __name__)
 
-@bookings.route("/register", methods=['POST'])
-# Register a new booking
-def register_booking():
-    return {"msg": 'Booking registered!'}, 200
-    
-@bookings.route("/profile/<int:booking_id>", methods=['GET'])
-# Get booking details by id
-def booking_details(booking_id):
-    return {"msg": 'Booking profile!'}, 200
-    
-@bookings.route("/list", methods=['GET'])
-# Get all bookings
-def list_bookings():
-    return {"msg": 'Bookings list!'}, 200
-    
-@bookings.route("/cancel/<int:booking_id>", methods=['PUT'])
-# Cancel a booking
-def cancel_booking(booking_id):
-    return {"msg": 'Booking cancelled!'}, 200
-    
-@bookings.route("/list/<int:user_id>", methods=['GET'])
-# Get all bookings by user id
-def list_bookings_by_user(user_id):
-    return {"msg": 'Bookings list by user!'}, 200
-    
-@bookings.route("/list/<string:matricula>", methods=['GET'])
-# Get all bookings by vehicle matricula
-def list_bookings_by_vehicle(matricula):
-    return {"msg": 'Bookings list by vehicle!'}, 200
+
+@bookings.route("/disponibilidad", methods=['POST'])
+# Consultar disponibilidad de turnos para un vehículo
+def disponibilidad():
+    """
+    Consulta los slots disponibles para un vehículo.
+    Request body: {"matricula": "ABC123", "fecha_inicio": "2025-10-25"} (fecha_inicio es opcional)
+    """
+    return consultar_disponibilidad()
+
+
+@bookings.route("/reservar", methods=['POST'])
+# Reservar un turno
+def reservar():
+    """
+    Crea un nuevo turno en estado RESERVADO.
+    Request body: {"matricula": "ABC123", "fecha": "2025-10-25 10:00", "creado_por": 1}
+    """
+    return reservar_turno()
+
+
+@bookings.route("/<int:turno_id>/confirmar", methods=['PUT'])
+# Confirmar un turno
+def confirmar(turno_id: int):
+    """
+    Confirma un turno (cambia estado a CONFIRMADO).
+    """
+    return confirmar_turno(turno_id)
+
+
+@bookings.route("/<int:turno_id>/cancelar", methods=['PUT'])
+# Cancelar un turno
+def cancelar(turno_id: int):
+    """
+    Cancela un turno (cambia estado a CANCELADO).
+    """
+    return cancelar_turno(turno_id)
+
+
+@bookings.route("/<int:turno_id>", methods=['GET'])
+# Obtener detalles de un turno por ID
+def detalle(turno_id: int):
+    """
+    Obtiene los detalles de un turno específico.
+    """
+    return obtener_turno(turno_id)
+
+
+@bookings.route("/usuario/<int:user_id>", methods=['GET'])
+# Listar turnos de un usuario
+def por_usuario(user_id: int):
+    """
+    Lista todos los turnos creados por un usuario específico.
+    """
+    return listar_turnos_por_usuario(user_id)
+
+
+@bookings.route("/vehiculo/<string:matricula>", methods=['GET'])
+# Listar turnos de un vehículo
+def por_vehiculo(matricula: str):
+    """
+    Lista todos los turnos de un vehículo específico.
+    """
+    return listar_turnos_por_vehiculo(matricula)
+
+
+@bookings.route("", methods=['GET'])
+# Listar todos los turnos
+def listar_todos():
+    """
+    Lista todos los turnos del sistema (para vista admin).
+    """
+    return listar_todos_los_turnos()
 

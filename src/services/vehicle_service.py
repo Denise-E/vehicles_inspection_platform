@@ -8,6 +8,13 @@ class VehicleService:
     def create_vehicle(data: dict, duenio_id: int) -> Vehiculo:
         """
         Crea un nuevo vehículo en la base de datos.
+        
+        Args:
+            data: Diccionario con los datos del vehículo
+            duenio_id: ID del usuario dueño del vehículo
+            
+        Returns:
+            Vehiculo creado
         """
         # Verificar usuario tenga rol DUENIO
         user = Usuario.query.filter_by(id=duenio_id).first()
@@ -25,7 +32,7 @@ class VehicleService:
             modelo=data["modelo"],
             anio=data["anio"],
             duenio_id=duenio_id,
-            estado_id=1 # ACTIVO
+            estado_id=1  # ACTIVO
         )
 
         db.session.add(vehicle)
@@ -33,3 +40,37 @@ class VehicleService:
         db.session.refresh(vehicle, ['estado'])
 
         return vehicle
+
+    @staticmethod
+    def get_vehicle_by_matricula(matricula: str) -> Vehiculo:
+        """
+        Obtiene un vehículo por su matrícula.
+        
+        Args:
+            matricula: Matrícula del vehículo
+            
+        Returns:
+            Vehiculo encontrado
+        """
+        vehicle = Vehiculo.query.filter_by(matricula=matricula).first()
+        if not vehicle:
+            raise ValueError(f"Vehículo con matrícula {matricula} no encontrado")
+        
+        db.session.refresh(vehicle, ['estado', 'duenio'])
+        return vehicle
+
+    @staticmethod
+    def list_all_vehicles() -> list[Vehiculo]:
+        """
+        Lista todos los vehículos del sistema.
+        
+        Returns:
+            Lista de vehículos
+        """
+        vehicles = Vehiculo.query.all()
+        
+        # Cargar relaciones
+        for vehicle in vehicles:
+            db.session.refresh(vehicle, ['estado', 'duenio'])
+        
+        return vehicles

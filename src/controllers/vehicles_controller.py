@@ -1,12 +1,32 @@
 from src.services.vehicle_service import VehicleService
-from src.schemas.vehicle_schemas import VehicleRegisterRequest, VehicleResponse
+from src.schemas.vehicle_schemas import (
+    VehicleRegisterRequest,
+    VehicleResponse,
+    VehicleDetailResponse,
+    VehicleListResponse
+)
 from flask import request, jsonify
+from typing import Tuple
 
 
-def register_vehicle(duenio_id: int) -> VehicleResponse:
+def register_vehicle(duenio_id: int) -> Tuple[dict, int]:
+    """
+    Registra un nuevo vehículo.
+    
+    Args:
+        duenio_id: ID del usuario dueño del vehículo
+        
+    Returns:
+        Tuple con (response_json, status_code)
+    """
     try:
+        # Validar request con Pydantic
         data = VehicleRegisterRequest(**request.json)
+        
+        # Crear vehículo
         vehicle = VehicleService.create_vehicle(data.model_dump(), duenio_id)
+        
+        # Preparar response
         response_data = {
             "id": vehicle.id,
             "matricula": vehicle.matricula,
@@ -15,7 +35,82 @@ def register_vehicle(duenio_id: int) -> VehicleResponse:
             "anio": vehicle.anio,
             "estado": vehicle.estado.nombre
         }
+        
+        # Validar response con Pydantic
         response = VehicleResponse(**response_data)
         return jsonify(response.model_dump()), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+def get_vehicle_profile(matricula: str) -> Tuple[dict, int]:
+    """
+    Obtiene el perfil de un vehículo por matrícula.
+    
+    Args:
+        matricula: Matrícula del vehículo
+        
+    Returns:
+        Tuple con (response_json, status_code)
+    """
+    try:
+        # Obtener vehículo
+        vehicle = VehicleService.get_vehicle_by_matricula(matricula)
+        
+        # Preparar response
+        response_data = {
+            "id": vehicle.id,
+            "matricula": vehicle.matricula,
+            "marca": vehicle.marca,
+            "modelo": vehicle.modelo,
+            "anio": vehicle.anio,
+            "estado": vehicle.estado.nombre,
+            "duenio_id": vehicle.duenio_id,
+            "nombre_duenio": vehicle.duenio.nombre_completo
+        }
+        
+        # Validar response con Pydantic
+        response = VehicleDetailResponse(**response_data)
+        return jsonify(response.model_dump()), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+
+def list_all_vehicles() -> Tuple[dict, int]:
+    """
+    Lista todos los vehículos del sistema.
+    
+    Returns:
+        Tuple con (response_json, status_code)
+    """
+    try:
+        # Obtener todos los vehículos
+        vehicles = VehicleService.list_all_vehicles()
+        
+        # Preparar response
+        vehicles_data = []
+        for vehicle in vehicles:
+            vehicles_data.append({
+                "id": vehicle.id,
+                "matricula": vehicle.matricula,
+                "marca": vehicle.marca,
+                "modelo": vehicle.modelo,
+                "anio": vehicle.anio,
+                "estado": vehicle.estado.nombre,
+                "duenio_id": vehicle.duenio_id,
+                "nombre_duenio": vehicle.duenio.nombre_completo
+            })
+        
+        response_data = {
+            "vehiculos": vehicles_data,
+            "total": len(vehicles_data)
+        }
+        
+        # Validar response con Pydantic
+        response = VehicleListResponse(**response_data)
+        return jsonify(response.model_dump()), 200
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 400
