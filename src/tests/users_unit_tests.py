@@ -48,6 +48,39 @@ def client(app):
     return app.test_client()
 
 
+def get_auth_token(client, app, mail="test@example.com", password="password123", role="DUENIO"):
+    """
+    Helper function para obtener un token JWT creando y haciendo login con un usuario.
+    
+    Returns:
+        str: Token JWT
+    """
+    with app.app_context():
+        # Crear usuario si no existe
+        rol = UsuarioRol.query.filter_by(nombre=role).first()
+        existing_user = Usuario.query.filter_by(mail=mail).first()
+        
+        if not existing_user:
+            user = Usuario(
+                nombre_completo="Test User",
+                mail=mail,
+                telefono="123456789",
+                hash_password=hash_password(password),
+                rol_id=rol.id,
+                activo=True
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # Hacer login
+        login_data = {
+            "mail": mail,
+            "contrasenia": password
+        }
+        response = client.post('/api/users/login', json=login_data)
+        return response.get_json()['token']
+
+
 # ========================================
 # TESTS PARA /api/users/register
 # ========================================
@@ -129,7 +162,7 @@ def test_register_user_duplicate_email(client, app):
 # ========================================
 
 def test_login_user_success(client, app):
-    """Test: Login exitoso de un usuario"""
+    """Test: Login exitoso de un usuario y retorna token JWT"""
     with app.app_context():
         # Crear usuario previo
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -157,6 +190,8 @@ def test_login_user_success(client, app):
         assert response_data['nombre_completo'] == "Carlos Rodriguez"
         assert response_data['mail'] == "carlos@example.com"
         assert response_data['activo']
+        assert 'token' in response_data
+        assert len(response_data['token']) > 0
 
 
 def test_login_user_invalid_password(client, app):
@@ -210,7 +245,7 @@ def test_login_user_email_not_found(client, app):
 # ========================================
 
 def test_get_user_profile_success(client, app):
-    """Test: Obtener perfil de usuario exitosamente"""
+    """Test: Obtener perfil de usuario exitosamente con JWT"""
     with app.app_context():
         # Crear usuario previo
         rol = UsuarioRol.query.filter_by(nombre='INSPECTOR').first()
@@ -226,8 +261,12 @@ def test_get_user_profile_success(client, app):
         db.session.commit()
         user_id = user.id
         
+        # Obtener token
+        token = get_auth_token(client, app, "luis@example.com", "inspector123", "INSPECTOR")
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Obtener perfil
-        response = client.get(f'/api/users/profile/{user_id}')
+        response = client.get(f'/api/users/profile/{user_id}', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -237,11 +276,26 @@ def test_get_user_profile_success(client, app):
         assert response_data['id'] == user_id
 
 
+def test_get_user_profile_without_token(client, app):
+    """Test: Obtener perfil falla sin token JWT"""
+    with app.app_context():
+        # Intentar obtener perfil sin token
+        response = client.get('/api/users/profile/1')
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
 def test_get_user_profile_not_found(client, app):
     """Test: Obtener perfil falla con usuario no encontrado"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Intentar obtener perfil con ID 999 (no existente)
-        response = client.get('/api/users/profile/999')
+        response = client.get('/api/users/profile/999', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()

@@ -1,5 +1,6 @@
 from src.services.user_service import UserService
-from src.schemas.user_schemas import UserRegisterRequest, UserResponse, UserLoginRequest
+from src.schemas.user_schemas import UserRegisterRequest, UserResponse, UserLoginRequest, UserLoginResponse
+from src.utils.jwt_utils import generate_token
 from flask import request, jsonify
 
 
@@ -35,17 +36,21 @@ def login_user():
         
         user = UserService.login_user(data.model_dump())
         
+        # Generar token JWT
+        token = generate_token(user.id, user.mail, user.rol.nombre)
+        
         response_data = {
             "id": user.id,
             "nombre_completo": user.nombre_completo,
             "mail": user.mail,
             "telefono": user.telefono,
             "rol": user.rol.nombre, 
-            "activo": user.activo
+            "activo": user.activo,
+            "token": token
         }
         
-        # Valida response body con Pydantic
-        response = UserResponse(**response_data)
+        # Valida response body con Pydantic (ahora incluye token)
+        response = UserLoginResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
     except Exception as e:

@@ -22,3 +22,14 @@ class UserResponse(BaseModel):
     telefono: str | None
     rol: str
     activo: bool
+
+
+class UserLoginResponse(BaseModel):
+    """Response para login con token JWT"""
+    id: int
+    nombre_completo: str
+    mail: EmailStr
+    telefono: str | None
+    rol: str
+    activo: bool
+    token: str
