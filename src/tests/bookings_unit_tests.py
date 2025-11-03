@@ -625,8 +625,12 @@ def test_listar_turnos_por_usuario_success(client, app, setup_data):
 # ========================================
 
 def test_listar_turnos_por_vehiculo_success(client, app, setup_data):
-    """Test: Listar turnos de un vehículo exitosamente"""
+    """Test: Listar turnos de un vehículo exitosamente con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Crear turnos
         today = datetime.now()
         days_ahead = 0 - today.weekday()
@@ -647,10 +651,97 @@ def test_listar_turnos_por_vehiculo_success(client, app, setup_data):
         db.session.commit()
         
         # Listar turnos
-        response = client.get(f'/api/bookings/vehiculo/{setup_data["matricula"]}')
+        response = client.get(f'/api/bookings/vehiculo/{setup_data["matricula"]}', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
         assert 'turnos' in response_data
         assert response_data['total'] >= 1
+
+
+# ========================================
+# TESTS PARA VERIFICAR AUTENTICACIÓN JWT (401 sin token)
+# ========================================
+
+def test_disponibilidad_without_token(client, app, setup_data):
+    """Test: Consultar disponibilidad falla sin token JWT"""
+    with app.app_context():
+        data = {"matricula": setup_data["matricula"]}
+        response = client.post('/api/bookings/disponibilidad', json=data)
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_reservar_without_token(client, app, setup_data):
+    """Test: Reservar turno falla sin token JWT"""
+    with app.app_context():
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=10, minute=0, second=0, microsecond=0)
+        
+        data = {
+            "matricula": setup_data["matricula"],
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M'),
+            "creado_por": setup_data["usuario_id"]
+        }
+        response = client.post('/api/bookings/reservar', json=data)
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_confirmar_without_token(client, app):
+    """Test: Confirmar turno falla sin token JWT"""
+    with app.app_context():
+        response = client.put('/api/bookings/1/confirmar')
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_cancelar_without_token(client, app):
+    """Test: Cancelar turno falla sin token JWT"""
+    with app.app_context():
+        response = client.put('/api/bookings/1/cancelar')
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_obtener_turno_without_token(client, app):
+    """Test: Obtener turno falla sin token JWT"""
+    with app.app_context():
+        response = client.get('/api/bookings/1')
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_listar_por_usuario_without_token(client, app):
+    """Test: Listar turnos por usuario falla sin token JWT"""
+    with app.app_context():
+        response = client.get('/api/bookings/usuario/1')
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_listar_por_vehiculo_without_token(client, app):
+    """Test: Listar turnos por vehículo falla sin token JWT"""
+    with app.app_context():
+        response = client.get('/api/bookings/vehiculo/ABC123')
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
 
