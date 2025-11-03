@@ -63,6 +63,39 @@ def client(app):
     return app.test_client()
 
 
+def get_auth_token(client, app, mail="test_booking@example.com", password="password123", role="DUENIO"):
+    """
+    Helper function para obtener un token JWT creando y haciendo login con un usuario.
+    
+    Returns:
+        str: Token JWT
+    """
+    with app.app_context():
+        # Crear usuario si no existe
+        rol = UsuarioRol.query.filter_by(nombre=role).first()
+        existing_user = Usuario.query.filter_by(mail=mail).first()
+        
+        if not existing_user:
+            user = Usuario(
+                nombre_completo="Test Booking User",
+                mail=mail,
+                telefono="123456789",
+                hash_password=hash_password(password),
+                rol_id=rol.id,
+                activo=True
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # Hacer login
+        login_data = {
+            "mail": mail,
+            "contrasenia": password
+        }
+        response = client.post('/api/users/login', json=login_data)
+        return response.get_json()['token']
+
+
 @pytest.fixture
 def setup_data(app):
     """Crea datos de prueba (usuarios y vehículos)"""
@@ -105,8 +138,12 @@ def setup_data(app):
 # ========================================
 
 def test_consultar_disponibilidad_success(client, app, setup_data):
-    """Test: Consultar disponibilidad exitosamente"""
+    """Test: Consultar disponibilidad exitosamente con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Calcular fecha futura (próximo lunes)
         today = datetime.now()
         days_ahead = 0 - today.weekday()  # Lunes = 0
@@ -119,7 +156,7 @@ def test_consultar_disponibilidad_success(client, app, setup_data):
             "fecha_inicio": next_monday.strftime('%Y-%m-%d')
         }
         
-        response = client.post('/api/bookings/disponibilidad', json=data)
+        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -130,13 +167,17 @@ def test_consultar_disponibilidad_success(client, app, setup_data):
 
 
 def test_consultar_disponibilidad_vehiculo_no_existe(client, app):
-    """Test: Consultar disponibilidad falla con vehículo no existente"""
+    """Test: Consultar disponibilidad falla con vehículo no existente con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         data = {
             "matricula": "XYZ999"
         }
         
-        response = client.post('/api/bookings/disponibilidad', json=data)
+        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -145,14 +186,18 @@ def test_consultar_disponibilidad_vehiculo_no_existe(client, app):
 
 
 def test_consultar_disponibilidad_formato_fecha_invalido(client, app, setup_data):
-    """Test: Consultar disponibilidad falla con formato de fecha inválido"""
+    """Test: Consultar disponibilidad falla con formato de fecha inválido con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         data = {
             "matricula": setup_data["matricula"],
             "fecha_inicio": "25/10/2025"  # Formato incorrecto
         }
         
-        response = client.post('/api/bookings/disponibilidad', json=data)
+        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -164,8 +209,12 @@ def test_consultar_disponibilidad_formato_fecha_invalido(client, app, setup_data
 # ========================================
 
 def test_reservar_turno_success(client, app, setup_data):
-    """Test: Reservar turno exitosamente"""
+    """Test: Reservar turno exitosamente con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Calcular fecha futura (próximo lunes a las 10:00)
         today = datetime.now()
         days_ahead = 0 - today.weekday()
@@ -180,7 +229,7 @@ def test_reservar_turno_success(client, app, setup_data):
             "creado_por": setup_data["usuario_id"]
         }
         
-        response = client.post('/api/bookings/reservar', json=data)
+        response = client.post('/api/bookings/reservar', json=data, headers=headers)
         
         assert response.status_code == 201
         response_data = response.get_json()
@@ -190,8 +239,12 @@ def test_reservar_turno_success(client, app, setup_data):
 
 
 def test_reservar_turno_fecha_pasada(client, app, setup_data):
-    """Test: Reservar turno falla con fecha pasada"""
+    """Test: Reservar turno falla con fecha pasada con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Fecha del pasado
         fecha_pasada = datetime.now() - timedelta(days=7)
         
@@ -201,7 +254,7 @@ def test_reservar_turno_fecha_pasada(client, app, setup_data):
             "creado_por": setup_data["usuario_id"]
         }
         
-        response = client.post('/api/bookings/reservar', json=data)
+        response = client.post('/api/bookings/reservar', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()

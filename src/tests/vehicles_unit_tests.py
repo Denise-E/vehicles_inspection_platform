@@ -57,12 +57,45 @@ def client(app):
     return app.test_client()
 
 
+def get_auth_token(client, app, mail="test_vehicle@example.com", password="password123", role="DUENIO"):
+    """
+    Helper function para obtener un token JWT creando y haciendo login con un usuario.
+    
+    Returns:
+        str: Token JWT
+    """
+    with app.app_context():
+        # Crear usuario si no existe
+        rol = UsuarioRol.query.filter_by(nombre=role).first()
+        existing_user = Usuario.query.filter_by(mail=mail).first()
+        
+        if not existing_user:
+            user = Usuario(
+                nombre_completo="Test Vehicle User",
+                mail=mail,
+                telefono="123456789",
+                hash_password=hash_password(password),
+                rol_id=rol.id,
+                activo=True
+            )
+            db.session.add(user)
+            db.session.commit()
+        
+        # Hacer login
+        login_data = {
+            "mail": mail,
+            "contrasenia": password
+        }
+        response = client.post('/api/users/login', json=login_data)
+        return response.get_json()['token']
+
+
 # ========================================
 # TESTS PARA /api/vehicles/register/{duenio_id}
 # ========================================
 
 def test_register_vehicle_success(client, app):
-    """Test: Registro exitoso de un vehículo"""
+    """Test: Registro exitoso de un vehículo con JWT"""
     with app.app_context():
         # Crear usuario con rol DUENIO
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -78,6 +111,10 @@ def test_register_vehicle_success(client, app):
         db.session.commit()
         user_id = user.id
         
+        # Obtener token
+        token = get_auth_token(client, app, "pedro@example.com", "password123", "DUENIO")
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Registrar vehículo
         data = {
             "matricula": "ABC123",
@@ -86,7 +123,7 @@ def test_register_vehicle_success(client, app):
             "anio": 2020
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data)
+        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
         
         assert response.status_code == 201
         response_data = response.get_json()
@@ -99,7 +136,7 @@ def test_register_vehicle_success(client, app):
 
 
 def test_register_vehicle_duplicate_matricula(client, app):
-    """Test: Registro falla con matrícula ya registrada"""
+    """Test: Registro falla con matrícula ya registrada con JWT"""
     with app.app_context():
         # Crear usuario con rol DUENIO
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -114,6 +151,10 @@ def test_register_vehicle_duplicate_matricula(client, app):
         db.session.add(user)
         db.session.commit()
         user_id = user.id
+        
+        # Obtener token
+        token = get_auth_token(client, app, "maria@example.com", "password123", "DUENIO")
+        headers = {'Authorization': f'Bearer {token}'}
         
         # Crear vehículo previo
         estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
@@ -136,7 +177,7 @@ def test_register_vehicle_duplicate_matricula(client, app):
             "anio": 2021
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data)
+        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -145,7 +186,7 @@ def test_register_vehicle_duplicate_matricula(client, app):
 
 
 def test_register_vehicle_user_with_admin_role(client, app):
-    """Test: Registro falla con usuario rol ADMIN"""
+    """Test: Registro falla con usuario rol ADMIN con JWT"""
     with app.app_context():
         # Crear usuario con rol ADMIN
         rol = UsuarioRol.query.filter_by(nombre='ADMIN').first()
@@ -161,6 +202,10 @@ def test_register_vehicle_user_with_admin_role(client, app):
         db.session.commit()
         user_id = user.id
         
+        # Obtener token
+        token = get_auth_token(client, app, "admin@example.com", "password123", "ADMIN")
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Intentar registrar vehículo con usuario ADMIN
         data = {
             "matricula": "ADM999",
@@ -169,7 +214,7 @@ def test_register_vehicle_user_with_admin_role(client, app):
             "anio": 2022
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data)
+        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -178,7 +223,7 @@ def test_register_vehicle_user_with_admin_role(client, app):
 
 
 def test_register_vehicle_user_with_inspector_role(client, app):
-    """Test: Registro falla con usuario rol INSPECTOR"""
+    """Test: Registro falla con usuario rol INSPECTOR con JWT"""
     with app.app_context():
         # Crear usuario con rol INSPECTOR
         rol = UsuarioRol.query.filter_by(nombre='INSPECTOR').first()
@@ -194,6 +239,10 @@ def test_register_vehicle_user_with_inspector_role(client, app):
         db.session.commit()
         user_id = user.id
         
+        # Obtener token
+        token = get_auth_token(client, app, "inspector@example.com", "password123", "INSPECTOR")
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Intentar registrar vehículo con usuario INSPECTOR
         data = {
             "matricula": "INS888",
@@ -202,7 +251,7 @@ def test_register_vehicle_user_with_inspector_role(client, app):
             "anio": 2021
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data)
+        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -210,18 +259,36 @@ def test_register_vehicle_user_with_inspector_role(client, app):
         assert "no puede registrar" in response_data['error'].lower()
 
 
+def test_register_vehicle_without_token(client, app):
+    """Test: Registro falla sin token JWT"""
+    with app.app_context():
+        # Intentar registrar sin token
+        data = {
+            "matricula": "NO_TOKEN",
+            "marca": "Test",
+            "modelo": "Test",
+            "anio": 2020
+        }
+        
+        response = client.post('/api/vehicles/register/1', json=data)
+        
+        assert response.status_code == 401
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
 # ========================================
 # TESTS PARA /api/vehicles/{matricula} (GET - Profile)
 # ========================================
 
 def test_get_vehicle_profile_success(client, app):
-    """Test: Obtener perfil de vehículo exitosamente"""
+    """Test: Obtener perfil de vehículo exitosamente con JWT"""
     with app.app_context():
         # Crear usuario y vehículo
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
         user = Usuario(
             nombre_completo="Carlos Martinez",
-            mail="carlos@example.com",
+            mail="carlos_vehicle@example.com",
             telefono="333444555",
             hash_password=hash_password("password123"),
             rol_id=rol.id,
@@ -229,6 +296,10 @@ def test_get_vehicle_profile_success(client, app):
         )
         db.session.add(user)
         db.session.commit()
+        
+        # Obtener token
+        token = get_auth_token(client, app, "carlos_vehicle@example.com", "password123", "DUENIO")
+        headers = {'Authorization': f'Bearer {token}'}
         
         estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
         vehicle = Vehiculo(
@@ -243,7 +314,7 @@ def test_get_vehicle_profile_success(client, app):
         db.session.commit()
         
         # Obtener perfil
-        response = client.get('/api/vehicles/profile/GET123')
+        response = client.get('/api/vehicles/profile/GET123', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -253,9 +324,13 @@ def test_get_vehicle_profile_success(client, app):
 
 
 def test_get_vehicle_profile_not_found(client, app):
-    """Test: Obtener perfil falla con vehículo no existente"""
+    """Test: Obtener perfil falla con vehículo no existente con JWT"""
     with app.app_context():
-        response = client.get('/api/vehicles/profile/NOEXISTE')
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        response = client.get('/api/vehicles/profile/NOEXISTE', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -267,8 +342,12 @@ def test_get_vehicle_profile_not_found(client, app):
 # ========================================
 
 def test_list_all_vehicles_success(client, app):
-    """Test: Listar todos los vehículos exitosamente"""
+    """Test: Listar todos los vehículos exitosamente con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         # Crear usuarios y vehículos
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
         user1 = Usuario(
@@ -311,7 +390,7 @@ def test_list_all_vehicles_success(client, app):
         db.session.commit()
         
         # Listar vehículos
-        response = client.get('/api/vehicles')
+        response = client.get('/api/vehicles', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -325,7 +404,7 @@ def test_list_all_vehicles_success(client, app):
 # ========================================
 
 def test_update_vehicle_success(client, app):
-    """Test: Actualizar vehículo exitosamente"""
+    """Test: Actualizar vehículo exitosamente con JWT"""
     with app.app_context():
         # Crear usuario y vehículo
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -339,6 +418,10 @@ def test_update_vehicle_success(client, app):
         )
         db.session.add(user)
         db.session.commit()
+        
+        # Obtener token
+        token = get_auth_token(client, app, "roberto@example.com", "password123", "DUENIO")
+        headers = {'Authorization': f'Bearer {token}'}
         
         estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
         vehicle = Vehiculo(
@@ -359,7 +442,7 @@ def test_update_vehicle_success(client, app):
             "anio": 2020
         }
         
-        response = client.put('/api/vehicles/UPD123', json=data)
+        response = client.put('/api/vehicles/UPD123', json=data, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -369,15 +452,19 @@ def test_update_vehicle_success(client, app):
 
 
 def test_update_vehicle_not_found(client, app):
-    """Test: Actualizar vehículo falla con matrícula no existente"""
+    """Test: Actualizar vehículo falla con matrícula no existente con JWT"""
     with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
         data = {
             "marca": "Tesla",
             "modelo": "Model 3",
             "anio": 2023
         }
         
-        response = client.put('/api/vehicles/NOEXISTE', json=data)
+        response = client.put('/api/vehicles/NOEXISTE', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -385,7 +472,7 @@ def test_update_vehicle_not_found(client, app):
 
 
 def test_update_vehicle_invalid_year(client, app):
-    """Test: Actualizar vehículo falla con año inválido"""
+    """Test: Actualizar vehículo falla con año inválido con JWT"""
     with app.app_context():
         # Crear usuario y vehículo
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -399,6 +486,10 @@ def test_update_vehicle_invalid_year(client, app):
         )
         db.session.add(user)
         db.session.commit()
+        
+        # Obtener token
+        token = get_auth_token(client, app, "valeria@example.com", "password123", "DUENIO")
+        headers = {'Authorization': f'Bearer {token}'}
         
         estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
         vehicle = Vehiculo(
@@ -419,7 +510,7 @@ def test_update_vehicle_invalid_year(client, app):
             "anio": 1850  # Año inválido
         }
         
-        response = client.put('/api/vehicles/INV456', json=data)
+        response = client.put('/api/vehicles/INV456', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -431,7 +522,7 @@ def test_update_vehicle_invalid_year(client, app):
 # ========================================
 
 def test_delete_vehicle_success(client, app):
-    """Test: Desactivar vehículo exitosamente (soft delete con PATCH)"""
+    """Test: Desactivar vehículo exitosamente (soft delete con PATCH y JWT)"""
     with app.app_context():
         # Crear usuario y vehículo
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -446,6 +537,10 @@ def test_delete_vehicle_success(client, app):
         db.session.add(user)
         db.session.commit()
         
+        # Obtener token
+        token = get_auth_token(client, app, "diego@example.com", "password123", "DUENIO")
+        headers = {'Authorization': f'Bearer {token}'}
+        
         estado = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
         vehicle = Vehiculo(
             matricula="DEL789",
@@ -459,7 +554,7 @@ def test_delete_vehicle_success(client, app):
         db.session.commit()
         
         # Desactivar vehículo con PATCH
-        response = client.patch('/api/vehicles/DEL789/desactivar')
+        response = client.patch('/api/vehicles/DEL789/desactivar', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -468,9 +563,13 @@ def test_delete_vehicle_success(client, app):
 
 
 def test_delete_vehicle_not_found(client, app):
-    """Test: Desactivar vehículo falla con matrícula no existente"""
+    """Test: Desactivar vehículo falla con matrícula no existente con JWT"""
     with app.app_context():
-        response = client.patch('/api/vehicles/NOEXISTE/desactivar')
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        response = client.patch('/api/vehicles/NOEXISTE/desactivar', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -478,7 +577,7 @@ def test_delete_vehicle_not_found(client, app):
 
 
 def test_delete_vehicle_already_inactive(client, app):
-    """Test: Desactivar vehículo falla si ya está inactivo"""
+    """Test: Desactivar vehículo falla si ya está inactivo con JWT"""
     with app.app_context():
         # Crear usuario y vehículo INACTIVO
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -493,6 +592,10 @@ def test_delete_vehicle_already_inactive(client, app):
         db.session.add(user)
         db.session.commit()
         
+        # Obtener token
+        token = get_auth_token(client, app, "sofia@example.com", "password123", "DUENIO")
+        headers = {'Authorization': f'Bearer {token}'}
+        
         estado_inactivo = EstadoVehiculo.query.filter_by(nombre='INACTIVO').first()
         vehicle = Vehiculo(
             matricula="INA999",
@@ -506,7 +609,7 @@ def test_delete_vehicle_already_inactive(client, app):
         db.session.commit()
         
         # Intentar desactivar vehículo ya inactivo con PATCH
-        response = client.patch('/api/vehicles/INA999/desactivar')
+        response = client.patch('/api/vehicles/INA999/desactivar', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
