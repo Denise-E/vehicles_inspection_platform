@@ -88,7 +88,7 @@ def register(duenio_id: int):
     return register_vehicle(duenio_id)
     
 
-@vehicles.route("/profile/<string:matricula>", methods=['GET'])
+@vehicles.route("/<string:matricula>", methods=['GET'])
 @token_required
 def profile(matricula: str):
     """
@@ -271,7 +271,7 @@ def actualizar(matricula: str):
     return update_vehicle(matricula)
 
 
-@vehicles.route("/<string:matricula>/desactivar", methods=['PATCH'])
+@vehicles.route("/delete/<string:matricula>", methods=['PATCH'])
 @token_required
 def desactivar(matricula: str):
     """
