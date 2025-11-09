@@ -208,25 +208,46 @@ class InspectionService:
         return inspeccion
     
     @staticmethod
-    def get_inspection_by_id(inspeccion_id: int) -> Inspeccion:
+    def get_inspection_by_id(inspeccion_id: int, user_id: int = None, user_role: str = None) -> Inspeccion:
         """
         Obtiene una inspección por su ID con todos sus chequeos.
+        
+        Validaciones de autorización:
+        - ADMIN e INSPECTOR pueden ver cualquier inspección
+        - DUENIO solo puede ver inspecciones de sus propios vehículos
         """
         inspeccion = Inspeccion.query.filter_by(id=inspeccion_id).first()
         if not inspeccion:
             raise ValueError(f"Inspección con ID {inspeccion_id} no encontrada")
         
         db.session.refresh(inspeccion, ['chequeos', 'vehiculo', 'inspector', 'turno', 'resultado'])
+        
+        # Validar autorización por rol
+        if user_role not in ['ADMIN', 'INSPECTOR']:
+            # Si es DUENIO, verificar que el vehículo le pertenece
+            if inspeccion.vehiculo.duenio_id != user_id:
+                raise ValueError("No tienes permiso para ver esta inspección. Solo puedes ver inspecciones de tus propios vehículos")
+        
         return inspeccion
     
     @staticmethod
-    def list_inspections_by_vehiculo(matricula: str) -> list[Inspeccion]:
+    def list_inspections_by_vehiculo(matricula: str, user_id: int = None, user_role: str = None) -> list[Inspeccion]:
         """
         Lista todas las inspecciones de un vehículo por matrícula.
+        
+        Validaciones de autorización:
+        - ADMIN e INSPECTOR pueden ver inspecciones de cualquier vehículo
+        - DUENIO solo puede ver inspecciones de sus propios vehículos
         """
         vehiculo = Vehiculo.query.filter_by(matricula=matricula).first()
         if not vehiculo:
             raise ValueError(f"Vehículo con matrícula {matricula} no encontrado")
+        
+        # Validar autorización por rol
+        if user_role not in ['ADMIN', 'INSPECTOR']:
+            # Si es DUENIO, verificar que el vehículo le pertenece
+            if vehiculo.duenio_id != user_id:
+                raise ValueError("No tienes permiso para ver inspecciones de este vehículo. Solo puedes ver inspecciones de tus propios vehículos")
         
         inspecciones = Inspeccion.query.filter_by(vehiculo_id=vehiculo.id).all()
         
@@ -236,10 +257,20 @@ class InspectionService:
         return inspecciones
     
     @staticmethod
-    def list_inspections_by_inspector(inspector_id: int) -> list[Inspeccion]:
+    def list_inspections_by_inspector(inspector_id: int, user_id: int = None, user_role: str = None) -> list[Inspeccion]:
         """
         Lista todas las inspecciones realizadas por un inspector.
+        
+        Validaciones de autorización:
+        - ADMIN puede ver inspecciones de cualquier inspector
+        - INSPECTOR solo puede ver sus propias inspecciones
         """
+        # Validar autorización por rol
+        if user_role != 'ADMIN':
+            # Si es INSPECTOR, verificar que está consultando sus propias inspecciones
+            if inspector_id != user_id:
+                raise ValueError("No tienes permiso para ver inspecciones de otro inspector. Solo puedes ver tus propias inspecciones")
+        
         inspector = Usuario.query.filter_by(id=inspector_id).first()
         if not inspector:
             raise ValueError(f"Inspector con ID {inspector_id} no encontrado")

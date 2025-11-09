@@ -15,7 +15,7 @@ inspections = Blueprint('inspections', __name__)
 
 @inspections.route("", methods=['POST'])
 @token_required
-@role_required(['INSPECTOR'])
+@role_required('ADMIN', 'INSPECTOR')
 def crear():
     """
     Crear una nueva inspección
@@ -94,7 +94,7 @@ def crear():
 
 @inspections.route("/<int:inspeccion_id>/chequeos", methods=['POST'])
 @token_required
-@role_required(['INSPECTOR'])
+@role_required('ADMIN', 'INSPECTOR')
 def registrar_chequeos(inspeccion_id: int):
     """
     Registrar los 8 chequeos de una inspección
@@ -195,7 +195,7 @@ def registrar_chequeos(inspeccion_id: int):
 
 @inspections.route("/<int:inspeccion_id>/cerrar", methods=['POST'])
 @token_required
-@role_required(['INSPECTOR'])
+@role_required('ADMIN', 'INSPECTOR')
 def cerrar(inspeccion_id: int):
     """
     Cerrar una inspección y calcular resultado
@@ -298,6 +298,10 @@ def cerrar(inspeccion_id: int):
 def detalle(inspeccion_id: int):
     """
     Obtener detalles de una inspección
+    
+    Autorización:
+    - ADMIN e INSPECTOR: pueden ver cualquier inspección
+    - DUENIO: solo puede ver inspecciones de sus propios vehículos
     ---
     tags:
       - Inspecciones
@@ -373,6 +377,10 @@ def detalle(inspeccion_id: int):
 def por_vehiculo(matricula: str):
     """
     Listar inspecciones de un vehículo
+    
+    Autorización:
+    - ADMIN e INSPECTOR: pueden ver inspecciones de cualquier vehículo
+    - DUENIO: solo puede ver inspecciones de sus propios vehículos
     ---
     tags:
       - Inspecciones
@@ -439,6 +447,10 @@ def por_vehiculo(matricula: str):
 def por_inspector(inspector_id: int):
     """
     Listar inspecciones de un inspector
+    
+    Autorización:
+    - ADMIN: puede ver inspecciones de cualquier inspector
+    - INSPECTOR: solo puede ver sus propias inspecciones
     ---
     tags:
       - Inspecciones
@@ -502,6 +514,7 @@ def por_inspector(inspector_id: int):
 
 @inspections.route("", methods=['GET'])
 @token_required
+@role_required('ADMIN')
 def listar_todas():
     """
     Listar todas las inspecciones del sistema

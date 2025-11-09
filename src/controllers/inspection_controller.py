@@ -109,7 +109,10 @@ def get_inspection(inspeccion_id: int) -> Tuple[dict, int]:
     Obtiene una inspección por su ID con todos sus chequeos.
     """
     try:
-        inspection = InspectionService.get_inspection_by_id(inspeccion_id)
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        inspection = InspectionService.get_inspection_by_id(inspeccion_id, user_id=user_id, user_role=user_role)
         
         # Preparar chequeos para respuesta
         chequeos_response = []
@@ -143,9 +146,16 @@ def get_inspection(inspeccion_id: int) -> Tuple[dict, int]:
 def list_inspections_by_vehiculo(matricula: str) -> Tuple[dict, int]:
     """
     Lista todas las inspecciones de un vehículo por matrícula.
+    
+    Validaciones de autorización:
+    - ADMIN e INSPECTOR pueden ver inspecciones de cualquier vehículo
+    - DUENIO solo puede ver inspecciones de sus propios vehículos
     """
     try:
-        inspections = InspectionService.list_inspections_by_vehiculo(matricula)
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        inspections = InspectionService.list_inspections_by_vehiculo(matricula, user_id=user_id, user_role=user_role)
         
         inspections_data = []
         for inspection in inspections:
@@ -174,9 +184,16 @@ def list_inspections_by_vehiculo(matricula: str) -> Tuple[dict, int]:
 def list_inspections_by_inspector(inspector_id: int) -> Tuple[dict, int]:
     """
     Lista todas las inspecciones realizadas por un inspector.
+    
+    Validaciones de autorización:
+    - ADMIN puede ver inspecciones de cualquier inspector
+    - INSPECTOR solo puede ver sus propias inspecciones
     """
     try:
-        inspections = InspectionService.list_inspections_by_inspector(inspector_id)
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        inspections = InspectionService.list_inspections_by_inspector(inspector_id, user_id=user_id, user_role=user_role)
         
         inspections_data = []
         for inspection in inspections:
