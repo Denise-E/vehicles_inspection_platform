@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, constr, ConfigDict
 class UserRegisterRequest(BaseModel):
     nombre_completo: constr(min_length=3)
     mail: EmailStr
-    telefono: constr(min_length=6, max_length=20) | None = None
+    telefono: constr(min_length=6, max_length=20) 
     contrasenia: constr(min_length=6)
     rol: str
 
@@ -19,7 +19,7 @@ class UserResponse(BaseModel):
     id: int
     nombre_completo: str
     mail: EmailStr
-    telefono: str | None
+    telefono: str 
     rol: str
     activo: bool
 
@@ -29,7 +29,7 @@ class UserLoginResponse(BaseModel):
     id: int
     nombre_completo: str
     mail: EmailStr
-    telefono: str | None
+    telefono: str
     rol: str
     activo: bool
     token: str
