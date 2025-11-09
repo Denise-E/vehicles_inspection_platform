@@ -4,8 +4,7 @@ from src.schemas.booking_schemas import (
     DisponibilidadResponse,
     BookingCreateRequest,
     BookingResponse,
-    BookingListResponse,
-    SlotDisponible
+    BookingListResponse
 )
 from flask import request, jsonify
 from typing import Tuple
@@ -44,6 +43,10 @@ def reservar_turno() -> Tuple[dict, int]:
     """
     Crea un nuevo turno en estado RESERVADO.
     
+    Validaciones por rol:
+    - ADMIN: Puede crear turnos para cualquier vehículo
+    - Otros roles: Solo pueden crear turnos para sus propios vehículos
+    
     Returns:
         Tuple con (response_json, status_code)
     """
@@ -51,8 +54,15 @@ def reservar_turno() -> Tuple[dict, int]:
         # Validar request body con Pydantic
         data = BookingCreateRequest(**request.json)
         
-        # Crear turno
-        turno = BookingService.create_booking(data.model_dump())
+        # Obtener información del usuario del token JWT
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        booking_data = data.model_dump()
+        booking_data['creado_por'] = user_id  
+        
+        # Crear turno con validación de autorización por rol
+        turno = BookingService.create_booking(booking_data, user_role=user_role)
         
         # Preparar response
         response_data = {

@@ -30,10 +30,9 @@ class DisponibilidadRequest(BaseModel):
 
 
 class BookingCreateRequest(BaseModel):
-    """Request para crear/reservar un turno"""
+    """Request para crear un turno"""
     matricula: str
     fecha: str  # Formato: "YYYY-MM-DD HH:MM"
-    creado_por: int  # user_id del que crea el turno
     
     @field_validator('fecha')
     @classmethod

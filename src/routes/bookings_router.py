@@ -78,11 +78,11 @@ def disponibilidad():
     return consultar_disponibilidad()
 
 
-@bookings.route("/reservar", methods=['POST'])
+@bookings.route("", methods=['POST'])
 @token_required
-def reservar():
+def crear():
     """
-    Reservar un turno
+    Crear un turno
     ---
     tags:
       - Turnos
@@ -97,7 +97,6 @@ def reservar():
           required:
             - matricula
             - fecha
-            - creado_por
           properties:
             matricula:
               type: string
@@ -107,13 +106,9 @@ def reservar():
               format: datetime
               example: "2025-10-25 10:00"
               description: Fecha y hora del turno (Lunes-Viernes 9-20hs)
-            creado_por:
-              type: integer
-              example: 1
-              description: ID del usuario que crea el turno
     responses:
       201:
-        description: Turno reservado exitosamente (estado RESERVADO)
+        description: Turno creado exitosamente (estado RESERVADO). El creador se obtiene del token JWT. ADMIN puede crear turnos para cualquier vehículo, usuarios normales solo para sus vehículos activos
         schema:
           type: object
           properties:
@@ -130,17 +125,26 @@ def reservar():
               example: RESERVADO
             creado_por:
               type: integer
+              description: ID del usuario que creó el turno (obtenido del token JWT)
             nombre_creador:
               type: string
       400:
-        description: Error en los datos, fecha inválida o turno ya existe
+        description: Error en los datos, fecha inválida, turno ya existe o no tiene permiso para el vehículo
         schema:
           type: object
           properties:
             error:
               type: string
+              example: "No tienes permiso para crear turnos para este vehículo. Solo puedes crear turnos para tus propios vehículos"
       401:
         description: Token no proporcionado o inválido
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      403:
+        description: Sin permisos (si intenta crear turno para vehículo que no le pertenece)
         schema:
           type: object
           properties:

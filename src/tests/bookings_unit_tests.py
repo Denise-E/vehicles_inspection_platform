@@ -247,7 +247,7 @@ def test_consultar_disponibilidad_sin_body(client, app):
 
 
 # ========================================
-# TESTS PARA /api/bookings/reservar
+# TESTS PARA /api/bookings
 # ========================================
 
 def test_reservar_turno_success(client, app, setup_data):
@@ -267,17 +267,17 @@ def test_reservar_turno_success(client, app, setup_data):
         
         data = {
             "matricula": setup_data["matricula"],
-            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M'),
-            "creado_por": setup_data["usuario_id"]
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
         }
         
-        response = client.post('/api/bookings/reservar', json=data, headers=headers)
+        response = client.post('/api/bookings', json=data, headers=headers)
         
         assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['matricula'] == setup_data["matricula"]
         assert response_data['estado'] == 'RESERVADO'
         assert 'id' in response_data
+        assert 'creado_por' in response_data
 
 
 def test_reservar_turno_fecha_pasada(client, app, setup_data):
@@ -292,11 +292,10 @@ def test_reservar_turno_fecha_pasada(client, app, setup_data):
         
         data = {
             "matricula": setup_data["matricula"],
-            "fecha": fecha_pasada.strftime('%Y-%m-%d %H:%M'),
-            "creado_por": setup_data["usuario_id"]
+            "fecha": fecha_pasada.strftime('%Y-%m-%d %H:%M')
         }
         
-        response = client.post('/api/bookings/reservar', json=data, headers=headers)
+        response = client.post('/api/bookings', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -321,11 +320,10 @@ def test_reservar_turno_dia_no_laborable(client, app, setup_data):
         
         data = {
             "matricula": setup_data["matricula"],
-            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M'),
-            "creado_por": setup_data["usuario_id"]
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
         }
         
-        response = client.post('/api/bookings/reservar', json=data, headers=headers)
+        response = client.post('/api/bookings', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -350,11 +348,10 @@ def test_reservar_turno_horario_invalido(client, app, setup_data):
         
         data = {
             "matricula": setup_data["matricula"],
-            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M'),
-            "creado_por": setup_data["usuario_id"]
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
         }
         
-        response = client.post('/api/bookings/reservar', json=data, headers=headers)
+        response = client.post('/api/bookings', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -391,11 +388,10 @@ def test_reservar_turno_duplicado(client, app, setup_data):
         # Intentar crear otro turno en la misma fecha
         data = {
             "matricula": setup_data["matricula"],
-            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M'),
-            "creado_por": setup_data["usuario_id"]
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
         }
         
-        response = client.post('/api/bookings/reservar', json=data, headers=headers)
+        response = client.post('/api/bookings', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -419,15 +415,128 @@ def test_reservar_turno_vehiculo_no_existe(client, app, setup_data):
         
         data = {
             "matricula": "ZZZ999",
-            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M'),
-            "creado_por": setup_data["usuario_id"]
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
         }
         
-        response = client.post('/api/bookings/reservar', json=data, headers=headers)
+        response = client.post('/api/bookings', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
         assert 'error' in response_data
+
+
+def test_reservar_turno_vehiculo_no_propio(client, app):
+    """Test: Usuario normal no puede crear turno para vehículo de otro usuario con JWT"""
+    with app.app_context():
+        # Crear un segundo usuario (dueño de otro vehículo)
+        rol_duenio = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        otro_usuario = Usuario(
+            nombre_completo="Maria Lopez",
+            mail="maria@example.com",
+            telefono="987654321",
+            hash_password=hash_password("password123"),
+            rol_id=rol_duenio.id,
+            activo=True
+        )
+        db.session.add(otro_usuario)
+        db.session.commit()
+        
+        # Crear vehículo del segundo usuario
+        estado_activo = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehiculo_otro = Vehiculo(
+            matricula="XYZ789",
+            marca="Ford",
+            modelo="Focus",
+            anio=2021,
+            duenio_id=otro_usuario.id,
+            estado_id=estado_activo.id
+        )
+        db.session.add(vehiculo_otro)
+        db.session.commit()
+        
+        # Obtener token del primer usuario (que NO es dueño del vehículo XYZ789)
+        token = get_auth_token(client, app, mail="test_booking@example.com")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=10, minute=0, second=0, microsecond=0)
+        
+        data = {
+            "matricula": "XYZ789",  # Vehículo de OTRO usuario
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
+        }
+        
+        response = client.post('/api/bookings', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+        assert "No tienes permiso" in response_data['error'] or "propios vehículos" in response_data['error']
+
+
+def test_reservar_turno_vehiculo_inactivo(client, app, setup_data):
+    """Test: Usuario normal no puede crear turno para vehículo inactivo con JWT"""
+    with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Cambiar el estado del vehículo a INACTIVO
+        vehiculo = Vehiculo.query.filter_by(matricula=setup_data["matricula"]).first()
+        estado_inactivo = EstadoVehiculo.query.filter_by(nombre='INACTIVO').first()
+        vehiculo.estado_id = estado_inactivo.id
+        db.session.commit()
+        
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=10, minute=0, second=0, microsecond=0)
+        
+        data = {
+            "matricula": setup_data["matricula"],
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
+        }
+        
+        response = client.post('/api/bookings', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+        assert "ACTIVO" in response_data['error'] or "estado" in response_data['error']
+
+
+def test_reservar_turno_admin_cualquier_vehiculo(client, app, setup_data):
+    """Test: Usuario ADMIN puede crear turno para cualquier vehículo con JWT"""
+    with app.app_context():
+        # Obtener token de un usuario ADMIN
+        token = get_auth_token(client, app, mail="admin@example.com", role="ADMIN")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=10, minute=0, second=0, microsecond=0)
+        
+        data = {
+            "matricula": setup_data["matricula"],  # Vehículo de otro usuario
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
+        }
+        
+        response = client.post('/api/bookings', json=data, headers=headers)
+        
+        assert response.status_code == 201
+        response_data = response.get_json()
+        assert response_data['matricula'] == setup_data["matricula"]
+        assert response_data['estado'] == 'RESERVADO'
+        assert 'id' in response_data
 
 
 # ========================================
@@ -728,10 +837,9 @@ def test_reservar_without_token(client, app, setup_data):
         
         data = {
             "matricula": setup_data["matricula"],
-            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M'),
-            "creado_por": setup_data["usuario_id"]
+            "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
         }
-        response = client.post('/api/bookings/reservar', json=data)
+        response = client.post('/api/bookings', json=data)
         
         assert response.status_code == 401
         response_data = response.get_json()

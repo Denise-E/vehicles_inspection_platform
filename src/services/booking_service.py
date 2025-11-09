@@ -77,12 +77,13 @@ class BookingService:
         }
 
     @staticmethod
-    def create_booking(data: dict) -> Turno:
+    def create_booking(data: dict, user_role: str = None) -> Turno:
         """
         Crea un nuevo turno (estado RESERVADO).
         
         Args:
             data: dict con matricula, fecha, creado_por
+            user_role: Rol del usuario
             
         Returns:
             Turno creado
@@ -96,6 +97,13 @@ class BookingService:
         usuario = Usuario.query.filter_by(id=data["creado_por"]).first()
         if not usuario:
             raise ValueError(f"Usuario con ID {data['creado_por']} no encontrado")
+        
+        if user_role != 'ADMIN':
+            if vehiculo.duenio_id != data["creado_por"]:
+                raise ValueError(f"No tienes permiso para crear turnos para este vehículo. Solo puedes crear turnos para tus propios vehículos")
+            
+            if vehiculo.estado.nombre != 'ACTIVO':
+                raise ValueError(f"No puedes crear turnos para un vehículo en estado {vehiculo.estado.nombre}. El vehículo debe estar ACTIVO")
         
         # Parsear fecha
         fecha_turno = datetime.strptime(data["fecha"], '%Y-%m-%d %H:%M')
