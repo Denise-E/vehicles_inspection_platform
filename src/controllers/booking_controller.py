@@ -140,8 +140,10 @@ def obtener_turno(turno_id: int) -> Tuple[dict, int]:
         Tuple con (response_json, status_code)
     """
     try:
-        # Obtener turno
-        turno = BookingService.get_booking_by_id(turno_id)
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        turno = BookingService.get_booking_by_id(turno_id, user_id=user_id, user_role=user_role)
         
         # Preparar response
         response_data = {
@@ -162,18 +164,16 @@ def obtener_turno(turno_id: int) -> Tuple[dict, int]:
         return jsonify({"error": str(e)}), 400
 
 
-def listar_turnos_por_usuario(user_id: int) -> Tuple[dict, int]:
+def listar_turnos_por_usuario() -> Tuple[dict, int]:
     """
-    Lista todos los turnos de un usuario.
-    
-    Args:
-        user_id: ID del usuario
+    Lista todos los turnos del usuario autenticado (obtenido del token JWT).
         
     Returns:
         Tuple con (response_json, status_code)
     """
     try:
-        # Obtener turnos
+        user_id = request.current_user['user_id']
+        
         turnos = BookingService.list_bookings_by_user(user_id)
         
         # Preparar response

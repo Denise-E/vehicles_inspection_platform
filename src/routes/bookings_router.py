@@ -289,25 +289,19 @@ def detalle(turno_id: int):
     return obtener_turno(turno_id)
 
 
-@bookings.route("/usuario/<int:user_id>", methods=['GET'])
+@bookings.route("/usuario", methods=['GET'])
 @token_required
-def por_usuario(user_id: int):
+def por_usuario():
     """
-    Listar turnos de un usuario
+    Listar turnos del usuario autenticado
     ---
     tags:
       - Turnos
     security:
       - Bearer: []
-    parameters:
-      - in: path
-        name: user_id
-        type: integer
-        required: true
-        description: ID del usuario
     responses:
       200:
-        description: Lista de turnos creados por el usuario
+        description: Lista de turnos del usuario autenticado (obtenido del token JWT)
         schema:
           type: object
           properties:
@@ -332,13 +326,6 @@ def por_usuario(user_id: int):
                     type: string
             total:
               type: integer
-      400:
-        description: Usuario no encontrado
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
       401:
         description: Token no proporcionado o inválido
         schema:
@@ -347,7 +334,7 @@ def por_usuario(user_id: int):
             error:
               type: string
     """
-    return listar_turnos_por_usuario(user_id)
+    return listar_turnos_por_usuario()
 
 
 @bookings.route("/vehiculo/<string:matricula>", methods=['GET'])

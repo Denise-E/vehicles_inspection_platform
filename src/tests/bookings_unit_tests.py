@@ -939,18 +939,153 @@ def test_obtener_turno_no_encontrado(client, app):
         assert 'error' in response_data
 
 
+def test_obtener_turno_sin_permiso(client, app):
+    """Test: Usuario normal no puede ver turno de vehículo ajeno"""
+    with app.app_context():
+        # Crear dos usuarios diferentes
+        rol_duenio = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        
+        # Usuario 1 (dueño del vehículo)
+        usuario1 = Usuario(
+            nombre_completo="Usuario Uno Get",
+            mail="usuario1get@example.com",
+            telefono="111111111",
+            hash_password=hash_password("password123"),
+            rol_id=rol_duenio.id,
+            activo=True
+        )
+        db.session.add(usuario1)
+        db.session.commit()
+        
+        # Usuario 2 (intentará ver turno del usuario 1)
+        usuario2 = Usuario(
+            nombre_completo="Usuario Dos Get",
+            mail="usuario2get@example.com",
+            telefono="222222222",
+            hash_password=hash_password("password123"),
+            rol_id=rol_duenio.id,
+            activo=True
+        )
+        db.session.add(usuario2)
+        db.session.commit()
+        
+        # Crear vehículo del usuario 1
+        estado_activo = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehiculo = Vehiculo(
+            matricula="VEHGET001",
+            marca="Honda",
+            modelo="Accord",
+            anio=2022,
+            duenio_id=usuario1.id,
+            estado_id=estado_activo.id
+        )
+        db.session.add(vehiculo)
+        db.session.commit()
+        
+        # Crear turno para el vehículo del usuario 1
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=18, minute=0, second=0, microsecond=0)
+        
+        estado_reservado = EstadoTurno.query.filter_by(nombre='RESERVADO').first()
+        turno = Turno(
+            vehiculo_id=vehiculo.id,
+            fecha=fecha_turno,
+            estado_id=estado_reservado.id,
+            creado_por=usuario1.id
+        )
+        db.session.add(turno)
+        db.session.commit()
+        turno_id = turno.id
+        
+        # Usuario 2 intenta ver el turno del usuario 1
+        token = get_auth_token(client, app, mail="usuario2get@example.com")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        response = client.get(f'/api/bookings/{turno_id}', headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+        assert "No tienes permiso" in response_data['error'] or "propios vehículos" in response_data['error']
+
+
+def test_obtener_turno_admin_puede_ver_cualquiera(client, app):
+    """Test: ADMIN puede ver turno de cualquier vehículo"""
+    with app.app_context():
+        # Crear usuario normal (dueño del vehículo)
+        rol_duenio = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        usuario_normal = Usuario(
+            nombre_completo="Usuario Normal Get",
+            mail="usuarionormalget@example.com",
+            telefono="333333333",
+            hash_password=hash_password("password123"),
+            rol_id=rol_duenio.id,
+            activo=True
+        )
+        db.session.add(usuario_normal)
+        db.session.commit()
+        
+        # Crear vehículo del usuario normal
+        estado_activo = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehiculo = Vehiculo(
+            matricula="VEHGET002",
+            marca="Mazda",
+            modelo="6",
+            anio=2023,
+            duenio_id=usuario_normal.id,
+            estado_id=estado_activo.id
+        )
+        db.session.add(vehiculo)
+        db.session.commit()
+        
+        # Crear turno para el vehículo
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=19, minute=0, second=0, microsecond=0)
+        
+        estado_reservado = EstadoTurno.query.filter_by(nombre='RESERVADO').first()
+        turno = Turno(
+            vehiculo_id=vehiculo.id,
+            fecha=fecha_turno,
+            estado_id=estado_reservado.id,
+            creado_por=usuario_normal.id
+        )
+        db.session.add(turno)
+        db.session.commit()
+        turno_id = turno.id
+        
+        # ADMIN intenta ver el turno
+        token = get_auth_token(client, app, mail="adminget@test.com", role="ADMIN")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        response = client.get(f'/api/bookings/{turno_id}', headers=headers)
+        
+        # ADMIN debe poder verlo exitosamente
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert response_data['id'] == turno_id
+        assert response_data['matricula'] == "VEHGET002"
+
+
 # ========================================
-# TESTS PARA /api/bookings/usuario/{user_id}
+# TESTS PARA GET /api/bookings/usuario
 # ========================================
 
-def test_listar_turnos_por_usuario_success(client, app, setup_data):
-    """Test: Listar turnos de un usuario exitosamente con JWT"""
+def test_listar_mis_turnos_success(client, app, setup_data):
+    """Test: Listar mis turnos (del usuario autenticado) exitosamente con JWT"""
     with app.app_context():
-        # Obtener token
+        # Obtener token del usuario autenticado
         token = get_auth_token(client, app)
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear turnos
+        # Crear turnos para el usuario autenticado
         today = datetime.now()
         days_ahead = 0 - today.weekday()
         if days_ahead <= 0:
@@ -975,8 +1110,8 @@ def test_listar_turnos_por_usuario_success(client, app, setup_data):
         db.session.add_all([turno1, turno2])
         db.session.commit()
         
-        # Listar turnos
-        response = client.get(f'/api/bookings/usuario/{setup_data["usuario_id"]}', headers=headers)
+        # Listar mis turnos (user_id obtenido del token automáticamente)
+        response = client.get('/api/bookings/usuario', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -1069,10 +1204,10 @@ def test_obtener_turno_without_token(client, app):
         assert 'error' in response_data
 
 
-def test_listar_por_usuario_without_token(client, app):
-    """Test: Listar turnos por usuario falla sin token JWT"""
+def test_listar_mis_turnos_without_token(client, app):
+    """Test: Listar mis turnos falla sin token JWT"""
     with app.app_context():
-        response = client.get('/api/bookings/usuario/1')
+        response = client.get('/api/bookings/usuario')
         
         assert response.status_code == 401
         response_data = response.get_json()

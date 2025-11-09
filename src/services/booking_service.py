@@ -213,12 +213,18 @@ class BookingService:
         return turno
 
     @staticmethod
-    def get_booking_by_id(turno_id: int) -> Turno:
+    def get_booking_by_id(turno_id: int, user_id: int = None, user_role: str = None) -> Turno:
         """
         Obtiene un turno por su ID.
         
+        Reglas de autorización:
+        - ADMIN puede ver cualquier turno
+        - Usuarios normales solo pueden ver turnos de sus propios vehículos
+        
         Args:
             turno_id: ID del turno
+            user_id: ID del usuario que consulta
+            user_role: Rol del usuario
             
         Returns:
             Turno encontrado
@@ -226,6 +232,10 @@ class BookingService:
         turno = Turno.query.filter_by(id=turno_id).first()
         if not turno:
             raise ValueError(f"Turno con ID {turno_id} no encontrado")
+        
+        if user_role != 'ADMIN':
+            if turno.vehiculo.duenio_id != user_id:
+                raise ValueError("No tienes permiso para ver este turno. Solo puedes ver turnos de tus propios vehículos")
         
         db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
         return turno
