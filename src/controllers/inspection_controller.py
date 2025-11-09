@@ -9,6 +9,7 @@ from src.schemas.inspection_schemas import (
 )
 from flask import request, jsonify
 from typing import Tuple
+from pydantic import ValidationError
 
 
 def create_inspection() -> Tuple[dict, int]:
@@ -33,6 +34,8 @@ def create_inspection() -> Tuple[dict, int]:
         }
         response = InspectionResponse(**response_data)
         return jsonify(response.model_dump()), 201
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -62,6 +65,8 @@ def register_chequeos(inspeccion_id: int) -> Tuple[dict, int]:
         }
         response = InspectionResponse(**response_data)
         return jsonify(response.model_dump()), 200
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -100,6 +105,8 @@ def close_inspection(inspeccion_id: int) -> Tuple[dict, int]:
         }
         response = InspectionDetailResponse(**response_data)
         return jsonify(response.model_dump()), 200
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -139,6 +146,8 @@ def get_inspection(inspeccion_id: int) -> Tuple[dict, int]:
         }
         response = InspectionDetailResponse(**response_data)
         return jsonify(response.model_dump()), 200
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -177,6 +186,8 @@ def list_inspections_by_vehiculo(matricula: str) -> Tuple[dict, int]:
         }
         response = InspectionListResponse(**response_data)
         return jsonify(response.model_dump()), 200
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -215,6 +226,8 @@ def list_inspections_by_inspector(inspector_id: int) -> Tuple[dict, int]:
         }
         response = InspectionListResponse(**response_data)
         return jsonify(response.model_dump()), 200
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -246,6 +259,8 @@ def list_all_inspections() -> Tuple[dict, int]:
         }
         response = InspectionListResponse(**response_data)
         return jsonify(response.model_dump()), 200
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 

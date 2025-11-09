@@ -2,6 +2,7 @@ from src.services.user_service import UserService
 from src.schemas.user_schemas import UserRegisterRequest, UserResponse, UserLoginRequest, UserLoginResponse
 from src.utils.jwt_utils import generate_token
 from flask import request, jsonify
+from pydantic import ValidationError
 
 
 def register_user():
@@ -25,6 +26,8 @@ def register_user():
         response = UserResponse(**response_data)
         return jsonify(response.model_dump()), 201
 
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -53,6 +56,8 @@ def login_user():
         response = UserLoginResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -73,5 +78,7 @@ def get_user_profile(user_id):
         # Valida response body con Pydantic
         response = UserResponse(**response_data)
         return jsonify(response.model_dump()), 200
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400

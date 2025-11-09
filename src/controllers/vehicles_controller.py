@@ -8,6 +8,7 @@ from src.schemas.vehicle_schemas import (
 )
 from flask import request, jsonify
 from typing import Tuple
+from pydantic import ValidationError
 
 
 def register_vehicle() -> Tuple[dict, int]:
@@ -38,6 +39,8 @@ def register_vehicle() -> Tuple[dict, int]:
         response = VehicleResponse(**response_data)
         return jsonify(response.model_dump()), 201
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -72,6 +75,8 @@ def get_vehicle_profile(matricula: str) -> Tuple[dict, int]:
         response = VehicleDetailResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -110,6 +115,8 @@ def list_all_vehicles() -> Tuple[dict, int]:
         response = VehicleListResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -147,6 +154,8 @@ def update_vehicle(matricula: str) -> Tuple[dict, int]:
         response = VehicleDetailResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -181,5 +190,7 @@ def delete_vehicle(matricula: str) -> Tuple[dict, int]:
         response = VehicleDetailResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400

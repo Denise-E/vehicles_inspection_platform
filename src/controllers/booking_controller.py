@@ -9,6 +9,7 @@ from src.schemas.booking_schemas import (
 )
 from flask import request, jsonify
 from typing import Tuple
+from pydantic import ValidationError
 
 
 def consultar_disponibilidad() -> Tuple[dict, int]:
@@ -36,6 +37,8 @@ def consultar_disponibilidad() -> Tuple[dict, int]:
         response = DisponibilidadResponse(**disponibilidad)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -80,6 +83,8 @@ def reservar_turno() -> Tuple[dict, int]:
         response = BookingResponse(**response_data)
         return jsonify(response.model_dump()), 201
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -125,6 +130,8 @@ def actualizar_turno(turno_id: int) -> Tuple[dict, int]:
         response = BookingResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -160,6 +167,8 @@ def obtener_turno(turno_id: int) -> Tuple[dict, int]:
         response = BookingResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -198,6 +207,8 @@ def listar_turnos_por_usuario() -> Tuple[dict, int]:
         response = BookingListResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -238,6 +249,8 @@ def listar_turnos_por_vehiculo(matricula: str) -> Tuple[dict, int]:
         response = BookingListResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
@@ -275,6 +288,8 @@ def listar_todos_los_turnos() -> Tuple[dict, int]:
         response = BookingListResponse(**response_data)
         return jsonify(response.model_dump()), 200
         
+    except ValidationError:
+        raise
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 

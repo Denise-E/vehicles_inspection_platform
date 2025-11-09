@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_swagger import swagger
+from pydantic import ValidationError
 import os
 
 """
@@ -49,6 +50,23 @@ def create_app():
     app.register_blueprint(vehicles, url_prefix="/api/vehicles")
     app.register_blueprint(bookings, url_prefix="/api/bookings")
     app.register_blueprint(inspections, url_prefix="/api/inspections")
+
+    # Error handlers
+    @app.errorhandler(ValidationError)
+    def handle_validation_error(error):
+        """
+        Manejador global de errores de validación de Pydantic.
+        """
+        errors = []
+        for err in error.errors():
+            field = err['loc'][0] if err['loc'] else 'unknown'
+            msg = err['msg']
+            errors.append(f"Campo '{field}': {msg}")
+        
+        return jsonify({
+            "error": "Campos inválidos",
+            "detalles": errors
+        }), 400
 
     # Health check
     @app.route("/api/health", methods=['GET'])
