@@ -98,8 +98,17 @@ def actualizar_turno(turno_id: int) -> Tuple[dict, int]:
         # Validar request body con Pydantic
         data = BookingUpdateRequest(**request.json)
         
-        # Actualizar estado del turno
-        turno = BookingService.update_booking_status(turno_id, data.estado_id)
+        # Obtener información del usuario del token JWT
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        # Actualizar estado del turno con validación de autorización
+        turno = BookingService.update_booking_status(
+            turno_id, 
+            data.estado_id,
+            user_id=user_id,
+            user_role=user_role
+        )
         
         # Preparar response
         response_data = {

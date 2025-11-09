@@ -747,6 +747,143 @@ def test_actualizar_estado_turno_no_existe(client, app):
         assert 'error' in response_data
 
 
+def test_actualizar_estado_usuario_sin_permiso(client, app):
+    """Test: Usuario normal no puede modificar turno de vehículo ajeno"""
+    with app.app_context():
+        # Crear dos usuarios diferentes
+        rol_duenio = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        
+        # Usuario 1 (dueño del vehículo)
+        usuario1 = Usuario(
+            nombre_completo="Usuario Uno",
+            mail="usuario1@example.com",
+            telefono="111111111",
+            hash_password=hash_password("password123"),
+            rol_id=rol_duenio.id,
+            activo=True
+        )
+        db.session.add(usuario1)
+        db.session.commit()
+        
+        # Usuario 2 (intentará modificar turno del usuario 1)
+        usuario2 = Usuario(
+            nombre_completo="Usuario Dos",
+            mail="usuario2@example.com",
+            telefono="222222222",
+            hash_password=hash_password("password123"),
+            rol_id=rol_duenio.id,
+            activo=True
+        )
+        db.session.add(usuario2)
+        db.session.commit()
+        
+        # Crear vehículo del usuario 1
+        estado_activo = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehiculo = Vehiculo(
+            matricula="VEH001",
+            marca="Honda",
+            modelo="Civic",
+            anio=2022,
+            duenio_id=usuario1.id,
+            estado_id=estado_activo.id
+        )
+        db.session.add(vehiculo)
+        db.session.commit()
+        
+        # Crear turno para el vehículo del usuario 1
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=16, minute=0, second=0, microsecond=0)
+        
+        estado_reservado = EstadoTurno.query.filter_by(nombre='RESERVADO').first()
+        turno = Turno(
+            vehiculo_id=vehiculo.id,
+            fecha=fecha_turno,
+            estado_id=estado_reservado.id,
+            creado_por=usuario1.id
+        )
+        db.session.add(turno)
+        db.session.commit()
+        turno_id = turno.id
+        
+        # Usuario 2 intenta modificar el turno del usuario 1
+        token = get_auth_token(client, app, mail="usuario2@example.com")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        data = {"estado_id": 2}  # Intentar cambiar a CONFIRMADO
+        response = client.put(f'/api/bookings/{turno_id}', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+        assert "No tienes permiso" in response_data['error'] or "propios vehículos" in response_data['error']
+
+
+def test_actualizar_estado_admin_puede_modificar_cualquier_turno(client, app):
+    """Test: ADMIN puede modificar turno de cualquier vehículo"""
+    with app.app_context():
+        # Crear usuario normal (dueño del vehículo)
+        rol_duenio = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        usuario_normal = Usuario(
+            nombre_completo="Usuario Normal",
+            mail="usuarionormal@example.com",
+            telefono="333333333",
+            hash_password=hash_password("password123"),
+            rol_id=rol_duenio.id,
+            activo=True
+        )
+        db.session.add(usuario_normal)
+        db.session.commit()
+        
+        # Crear vehículo del usuario normal
+        estado_activo = EstadoVehiculo.query.filter_by(nombre='ACTIVO').first()
+        vehiculo = Vehiculo(
+            matricula="VEH002",
+            marca="Mazda",
+            modelo="3",
+            anio=2023,
+            duenio_id=usuario_normal.id,
+            estado_id=estado_activo.id
+        )
+        db.session.add(vehiculo)
+        db.session.commit()
+        
+        # Crear turno para el vehículo
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=17, minute=0, second=0, microsecond=0)
+        
+        estado_reservado = EstadoTurno.query.filter_by(nombre='RESERVADO').first()
+        turno = Turno(
+            vehiculo_id=vehiculo.id,
+            fecha=fecha_turno,
+            estado_id=estado_reservado.id,
+            creado_por=usuario_normal.id
+        )
+        db.session.add(turno)
+        db.session.commit()
+        turno_id = turno.id
+        
+        # ADMIN intenta modificar el turno
+        token = get_auth_token(client, app, mail="admin@test.com", role="ADMIN")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        data = {"estado_id": 2}  # Cambiar a CONFIRMADO
+        response = client.put(f'/api/bookings/{turno_id}', json=data, headers=headers)
+        
+        # ADMIN debe poder modificarlo exitosamente
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert response_data['estado'] == 'CONFIRMADO'
+        assert response_data['id'] == turno_id
+
+
 # ========================================
 # TESTS PARA GET /api/bookings/{id}
 # ========================================

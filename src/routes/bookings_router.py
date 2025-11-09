@@ -187,10 +187,14 @@ def actualizar(turno_id: int):
                 - 3: COMPLETADO
                 - 4: CANCELADO
                 
+                Reglas de negocio:
+                - Estados COMPLETADO y CANCELADO son finales (no se pueden modificar)
+                - ADMIN puede modificar cualquier turno (excepto estados finales)
+                - Usuarios normales solo pueden modificar turnos de sus propios vehículos
+                
                 Transiciones válidas:
                 - RESERVADO → CONFIRMADO o CANCELADO
                 - CONFIRMADO → COMPLETADO o CANCELADO
-                - COMPLETADO y CANCELADO son estados finales
     responses:
       200:
         description: Estado del turno actualizado exitosamente
@@ -213,13 +217,13 @@ def actualizar(turno_id: int):
             nombre_creador:
               type: string
       400:
-        description: Turno no encontrado, estado inválido o transición de estado no permitida
+        description: Turno no encontrado, estado inválido, transición no permitida o sin permisos
         schema:
           type: object
           properties:
             error:
               type: string
-              example: "Transición de estado inválida: COMPLETADO → RESERVADO"
+              example: "No tienes permiso para modificar este turno. Solo puedes modificar turnos de tus propios vehículos"
       401:
         description: Token no proporcionado o inválido
         schema:

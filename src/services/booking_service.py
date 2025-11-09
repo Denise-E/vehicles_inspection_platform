@@ -149,9 +149,14 @@ class BookingService:
         return nuevo_turno
 
     @staticmethod
-    def update_booking_status(turno_id: int, nuevo_estado_id: int) -> Turno:
+    def update_booking_status(turno_id: int, nuevo_estado_id: int, user_id: int = None, user_role: str = None) -> Turno:
         """
         Actualiza el estado de un turno de forma genérica.
+        
+        Reglas de negocio:
+        - Estados COMPLETADO (3) y CANCELADO (4) son finales, no permiten cambios
+        - ADMIN puede modificar cualquier turno (excepto los que están en estados finales)
+        - Usuarios normales solo pueden modificar turnos de vehículos que les pertenecen
         
         Transiciones de estado válidas:
         - RESERVADO (1) → CONFIRMADO (2) o CANCELADO (4)
@@ -162,6 +167,8 @@ class BookingService:
         Args:
             turno_id: ID del turno
             nuevo_estado_id: ID del nuevo estado (1-RESERVADO, 2-CONFIRMADO, 3-COMPLETADO, 4-CANCELADO)
+            user_id: ID del usuario que intenta actualizar
+            user_role: Rol del usuario (ADMIN, DUENIO, etc.)
             
         Returns:
             Turno actualizado
@@ -169,6 +176,12 @@ class BookingService:
         turno = Turno.query.filter_by(id=turno_id).first()
         if not turno:
             raise ValueError(f"Turno con ID {turno_id} no encontrado")
+        
+        # VALIDACIÓN DE AUTORIZACIÓN POR ROL
+        if user_role != 'ADMIN':
+            # Si NO es admin, verificar que el vehículo del turno pertenece al usuario
+            if turno.vehiculo.duenio_id != user_id:
+                raise ValueError("No tienes permiso para modificar este turno. Solo puedes modificar turnos de tus propios vehículos")
         
         # Obtener el nuevo estado
         nuevo_estado = EstadoTurno.query.filter_by(id=nuevo_estado_id).first()
