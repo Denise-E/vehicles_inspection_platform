@@ -13,19 +13,23 @@ from typing import Tuple
 
 def consultar_disponibilidad() -> Tuple[dict, int]:
     """
-    Consulta los slots disponibles para un vehículo.
+    Consulta los slots disponibles del sistema (disponibilidad general).
     
     Returns:
         Tuple con (response_json, status_code)
     """
     try:
-        # Validar request body con Pydantic
-        data = DisponibilidadRequest(**request.json)
+        # Validar request body con Pydantic (puede ser vacío)
+        request_data = request.json if request.json else {}
+        data = DisponibilidadRequest(**request_data)
         
-        # Consultar disponibilidad
+        # Validar rango de fechas si aplica
+        data.validate_fecha_range()
+        
+        # Consultar disponibilidad general del sistema
         disponibilidad = BookingService.consultar_disponibilidad(
-            data.matricula,
-            data.fecha_inicio
+            data.fecha_inicio,
+            data.fecha_final
         )
         
         # Validar response con Pydantic

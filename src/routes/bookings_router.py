@@ -18,7 +18,7 @@ bookings = Blueprint('bookings', __name__)
 @token_required
 def disponibilidad():
     """
-    Consultar disponibilidad de turnos
+    Consultar disponibilidad general del sistema
     ---
     tags:
       - Turnos
@@ -27,28 +27,26 @@ def disponibilidad():
     parameters:
       - in: body
         name: body
-        required: true
+        required: false
         schema:
           type: object
-          required:
-            - matricula
           properties:
-            matricula:
-              type: string
-              example: ABC123
             fecha_inicio:
               type: string
               format: date
               example: "2025-10-25"
               description: Fecha desde la cual buscar (opcional, por defecto hoy)
+            fecha_final:
+              type: string
+              format: date
+              example: "2025-11-10"
+              description: Fecha hasta la cual buscar (opcional, si no se especifica muestra los próximos 15 días)
     responses:
       200:
-        description: Slots disponibles para el vehículo (Lunes a Viernes, 9:00-20:00)
+        description: Slots disponibles del sistema (Lunes a Viernes, 9:00-20:00)
         schema:
           type: object
           properties:
-            matricula:
-              type: string
             slots:
               type: array
               items:
@@ -61,8 +59,9 @@ def disponibilidad():
                     type: boolean
             total_disponibles:
               type: integer
+              description: Cantidad total de slots disponibles
       400:
-        description: Vehículo no encontrado o fecha inválida
+        description: Fecha inválida o rango de fechas incorrecto
         schema:
           type: object
           properties:

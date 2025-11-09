@@ -138,7 +138,7 @@ def setup_data(app):
 # ========================================
 
 def test_consultar_disponibilidad_success(client, app, setup_data):
-    """Test: Consultar disponibilidad exitosamente con JWT"""
+    """Test: Consultar disponibilidad general del sistema exitosamente con JWT"""
     with app.app_context():
         # Obtener token
         token = get_auth_token(client, app)
@@ -152,7 +152,6 @@ def test_consultar_disponibilidad_success(client, app, setup_data):
         next_monday = today + timedelta(days=days_ahead)
         
         data = {
-            "matricula": setup_data["matricula"],
             "fecha_inicio": next_monday.strftime('%Y-%m-%d')
         }
         
@@ -160,29 +159,38 @@ def test_consultar_disponibilidad_success(client, app, setup_data):
         
         assert response.status_code == 200
         response_data = response.get_json()
-        assert response_data['matricula'] == setup_data["matricula"]
         assert 'slots' in response_data
         assert 'total_disponibles' in response_data
         assert len(response_data['slots']) > 0
 
 
-def test_consultar_disponibilidad_vehiculo_no_existe(client, app):
-    """Test: Consultar disponibilidad falla con vehículo no existente con JWT"""
+def test_consultar_disponibilidad_con_rango_fechas(client, app):
+    """Test: Consultar disponibilidad con rango de fechas con JWT"""
     with app.app_context():
         # Obtener token
         token = get_auth_token(client, app)
         headers = {'Authorization': f'Bearer {token}'}
         
+        # Calcular rango de fechas (próximos 7 días)
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        fecha_inicio = today + timedelta(days=days_ahead)
+        fecha_final = fecha_inicio + timedelta(days=6)
+        
         data = {
-            "matricula": "XYZ999"
+            "fecha_inicio": fecha_inicio.strftime('%Y-%m-%d'),
+            "fecha_final": fecha_final.strftime('%Y-%m-%d')
         }
         
         response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
         
-        assert response.status_code == 400
+        assert response.status_code == 200
         response_data = response.get_json()
-        assert 'error' in response_data
-        assert "no encontrado" in response_data['error']
+        assert 'slots' in response_data
+        assert 'total_disponibles' in response_data
+        assert len(response_data['slots']) > 0
 
 
 def test_consultar_disponibilidad_formato_fecha_invalido(client, app, setup_data):
@@ -193,7 +201,6 @@ def test_consultar_disponibilidad_formato_fecha_invalido(client, app, setup_data
         headers = {'Authorization': f'Bearer {token}'}
         
         data = {
-            "matricula": setup_data["matricula"],
             "fecha_inicio": "25/10/2025"  # Formato incorrecto
         }
         
@@ -202,6 +209,41 @@ def test_consultar_disponibilidad_formato_fecha_invalido(client, app, setup_data
         assert response.status_code == 400
         response_data = response.get_json()
         assert 'error' in response_data
+
+
+def test_consultar_disponibilidad_rango_invalido(client, app):
+    """Test: Consultar disponibilidad falla si fecha_final es anterior a fecha_inicio con JWT"""
+    with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        data = {
+            "fecha_inicio": "2025-11-01",
+            "fecha_final": "2025-10-25"  # Anterior a fecha_inicio
+        }
+        
+        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_consultar_disponibilidad_sin_body(client, app):
+    """Test: Consultar disponibilidad sin body (usa valores por defecto) con JWT"""
+    with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Sin body - debe usar valores por defecto
+        response = client.post('/api/bookings/disponibilidad', json={}, headers=headers)
+        
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert 'slots' in response_data
+        assert 'total_disponibles' in response_data
 
 
 # ========================================
@@ -666,7 +708,7 @@ def test_listar_turnos_por_vehiculo_success(client, app, setup_data):
 def test_disponibilidad_without_token(client, app, setup_data):
     """Test: Consultar disponibilidad falla sin token JWT"""
     with app.app_context():
-        data = {"matricula": setup_data["matricula"]}
+        data = {}
         response = client.post('/api/bookings/disponibilidad', json=data)
         
         assert response.status_code == 401

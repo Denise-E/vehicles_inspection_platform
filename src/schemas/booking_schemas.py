@@ -5,11 +5,11 @@ from typing import Optional
 
 # Request schemas
 class DisponibilidadRequest(BaseModel):
-    """Request para consultar disponibilidad de turnos"""
-    matricula: str
+    """Request para consultar disponibilidad de turnos del sistema"""
     fecha_inicio: Optional[str] = None  # Formato: "YYYY-MM-DD", si no se envía usa hoy
+    fecha_final: Optional[str] = None  # Formato: "YYYY-MM-DD", opcional para consultar rango
     
-    @field_validator('fecha_inicio')
+    @field_validator('fecha_inicio', 'fecha_final')
     @classmethod
     def validate_fecha_format(cls, v: Optional[str]) -> Optional[str]:
         if v:
@@ -18,6 +18,15 @@ class DisponibilidadRequest(BaseModel):
             except ValueError:
                 raise ValueError('Formato de fecha inválido. Use YYYY-MM-DD')
         return v
+    
+    def validate_fecha_range(self):
+        """Valida que fecha_final sea posterior a fecha_inicio"""
+        if self.fecha_inicio and self.fecha_final:
+            inicio = datetime.strptime(self.fecha_inicio, '%Y-%m-%d')
+            final = datetime.strptime(self.fecha_final, '%Y-%m-%d')
+            if final < inicio:
+                raise ValueError('fecha_final debe ser posterior a fecha_inicio')
+        return True
 
 
 class BookingCreateRequest(BaseModel):
@@ -44,8 +53,7 @@ class SlotDisponible(BaseModel):
 
 
 class DisponibilidadResponse(BaseModel):
-    """Response con slots disponibles"""
-    matricula: str
+    """Response con slots disponibles del sistema"""
     slots: list[SlotDisponible]
     total_disponibles: int
 

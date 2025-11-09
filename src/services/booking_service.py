@@ -17,34 +17,38 @@ HORARIO_CONFIG = {
 class BookingService:
 
     @staticmethod
-    def consultar_disponibilidad(matricula: str, fecha_inicio: Optional[str] = None) -> dict:
+    def consultar_disponibilidad(fecha_inicio: Optional[str] = None, fecha_final: Optional[str] = None) -> dict:
         """
-        Consulta los slots disponibles para un vehículo en los próximos días.
+        Consulta los slots disponibles del sistema (disponibilidad general).
         
         Args:
-            matricula: Matrícula del vehículo
-            fecha_inicio: Fecha desde la cual buscar (formato YYYY-MM-DD)
+            fecha_inicio: Fecha desde la cual buscar (formato YYYY-MM-DD), por defecto hoy
+            fecha_final: Fecha hasta la cual buscar (formato YYYY-MM-DD), opcional
         
         Returns:
             dict con slots disponibles
         """
-        # Verificar que el vehículo existe
-        vehiculo = Vehiculo.query.filter_by(matricula=matricula).first()
-        if not vehiculo:
-            raise ValueError(f"Vehículo con matrícula {matricula} no encontrado")
-        
         # Determinar fecha de inicio
         if fecha_inicio:
             inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d')
         else:
             inicio = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         
+        # Determinar fecha final
+        if fecha_final:
+            final = datetime.strptime(fecha_final, '%Y-%m-%d')
+            # Validar que fecha_final sea posterior a fecha_inicio
+            if final < inicio:
+                raise ValueError("fecha_final debe ser posterior o igual a fecha_inicio")
+        else:
+            # Por defecto, mostrar los próximos N días configurados
+            final = inicio + timedelta(days=HORARIO_CONFIG["dias_anticipacion"])
+        
         # Generar slots disponibles
         slots = []
         fecha_actual = inicio
-        dias_generados = 0
         
-        while dias_generados < HORARIO_CONFIG["dias_anticipacion"]:
+        while fecha_actual <= final:
             # Solo días laborables (lunes a viernes)
             if fecha_actual.weekday() in HORARIO_CONFIG["dias_laborables"]:
                 # Generar slots por hora
@@ -53,9 +57,9 @@ class BookingService:
                     
                     # Solo mostrar slots futuros
                     if slot_datetime > datetime.now():
-                        # Verificar si hay un turno confirmado o reservado en ese horario
+                        # Verificar si hay algún turno confirmado o reservado en ese horario
+                        # (sin importar el vehículo - disponibilidad general del sistema)
                         turno_existente = Turno.query.filter(
-                            Turno.vehiculo_id == vehiculo.id,
                             Turno.fecha == slot_datetime,
                             Turno.estado_id.in_([1, 2])  # RESERVADO=1 o CONFIRMADO=2
                         ).first()
@@ -64,13 +68,10 @@ class BookingService:
                             "fecha": slot_datetime.strftime('%Y-%m-%d %H:%M'),
                             "disponible": turno_existente is None
                         })
-                
-                dias_generados += 1
             
             fecha_actual += timedelta(days=1)
         
         return {
-            "matricula": matricula,
             "slots": slots,
             "total_disponibles": sum(1 for slot in slots if slot["disponible"])
         }
