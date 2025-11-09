@@ -3,6 +3,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 class VehicleRegisterRequest(BaseModel):
     """Request para registrar un vehículo"""
+    duenio_id: int
     matricula: str
     marca: str
     modelo: str

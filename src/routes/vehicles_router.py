@@ -7,13 +7,15 @@ from src.controllers.vehicles_controller import (
     update_vehicle,
     delete_vehicle
 )
+from src.controllers.booking_controller import listar_turnos_por_vehiculo
+from src.controllers.inspection_controller import list_inspections_by_vehiculo
 
 vehicles = Blueprint('vehicles', __name__)
 
 
-@vehicles.route("/register/<int:duenio_id>", methods=['POST'])
+@vehicles.route("", methods=['POST'])
 @token_required
-def register(duenio_id: int):
+def register():
     """
     Registrar un nuevo vehículo
     ---
@@ -22,22 +24,22 @@ def register(duenio_id: int):
     security:
       - Bearer: []
     parameters:
-      - in: path
-        name: duenio_id
-        type: integer
-        required: true
-        description: ID del dueño del vehículo
       - in: body
         name: body
         required: true
         schema:
           type: object
           required:
+            - duenio_id
             - matricula
             - marca
             - modelo
             - anio
           properties:
+            duenio_id:
+              type: integer
+              example: 1
+              description: ID del dueño del vehículo
             matricula:
               type: string
               example: ABC123
@@ -85,7 +87,7 @@ def register(duenio_id: int):
             error:
               type: string
     """
-    return register_vehicle(duenio_id)
+    return register_vehicle()
     
 
 @vehicles.route("/<string:matricula>", methods=['GET'])
@@ -271,7 +273,7 @@ def actualizar(matricula: str):
     return update_vehicle(matricula)
 
 
-@vehicles.route("/delete/<string:matricula>", methods=['PATCH'])
+@vehicles.route("/<string:matricula>", methods=['DELETE'])
 @token_required
 def desactivar(matricula: str):
     """
@@ -326,3 +328,134 @@ def desactivar(matricula: str):
               type: string
     """
     return delete_vehicle(matricula)
+
+
+@vehicles.route("/<string:matricula>/bookings", methods=['GET'])
+@token_required
+def vehicle_bookings(matricula: str):
+    """
+    Listar turnos de un vehículo
+    ---
+    tags:
+      - Vehículos
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: matricula
+        type: string
+        required: true
+        description: Matrícula del vehículo
+    responses:
+      200:
+        description: Lista de turnos del vehículo
+        schema:
+          type: object
+          properties:
+            turnos:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  vehiculo_id:
+                    type: integer
+                  matricula:
+                    type: string
+                  fecha:
+                    type: string
+                  estado:
+                    type: string
+                  creado_por:
+                    type: integer
+                  nombre_creador:
+                    type: string
+            total:
+              type: integer
+      400:
+        description: Vehículo no encontrado
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      401:
+        description: Token no proporcionado o inválido
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    return listar_turnos_por_vehiculo(matricula)
+
+
+@vehicles.route("/<string:matricula>/inspections", methods=['GET'])
+@token_required
+def vehicle_inspections(matricula: str):
+    """
+    Listar inspecciones de un vehículo
+    
+    Autorización:
+    - ADMIN e INSPECTOR: pueden ver inspecciones de cualquier vehículo
+    - DUENIO: solo puede ver inspecciones de sus propios vehículos
+    ---
+    tags:
+      - Vehículos
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: matricula
+        type: string
+        required: true
+        description: Matrícula del vehículo
+    responses:
+      200:
+        description: Lista de inspecciones del vehículo
+        schema:
+          type: object
+          properties:
+            inspecciones:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  turno_id:
+                    type: integer
+                  vehiculo_matricula:
+                    type: string
+                  inspector_nombre:
+                    type: string
+                  fecha:
+                    type: string
+                    format: date-time
+                  puntuacion_total:
+                    type: integer
+                  resultado:
+                    type: string
+                  observacion:
+                    type: string
+                  estado:
+                    type: string
+            total:
+              type: integer
+      400:
+        description: Vehículo no encontrado
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      401:
+        description: Token no proporcionado o inválido
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    return list_inspections_by_vehiculo(matricula)

@@ -10,12 +10,9 @@ from flask import request, jsonify
 from typing import Tuple
 
 
-def register_vehicle(duenio_id: int) -> Tuple[dict, int]:
+def register_vehicle() -> Tuple[dict, int]:
     """
     Registra un nuevo vehículo.
-    
-    Args:
-        duenio_id: ID del usuario dueño del vehículo
         
     Returns:
         Tuple con (response_json, status_code)
@@ -25,7 +22,7 @@ def register_vehicle(duenio_id: int) -> Tuple[dict, int]:
         data = VehicleRegisterRequest(**request.json)
         
         # Crear vehículo
-        vehicle = VehicleService.create_vehicle(data.model_dump(), duenio_id)
+        vehicle = VehicleService.create_vehicle(data.model_dump(), data.duenio_id)
         
         # Preparar response
         response_data = {

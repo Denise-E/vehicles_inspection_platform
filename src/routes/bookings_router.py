@@ -5,17 +5,15 @@ from src.controllers.booking_controller import (
     reservar_turno,
     actualizar_turno,
     obtener_turno,
-    listar_turnos_por_usuario,
-    listar_turnos_por_vehiculo,
     listar_todos_los_turnos
 )
 
 bookings = Blueprint('bookings', __name__)
 
 
-@bookings.route("/disponibilidad", methods=['POST'])
+@bookings.route("/availability", methods=['POST'])
 @token_required
-def disponibilidad():
+def availability():
     """
     Consultar disponibilidad general del sistema
     ---
@@ -289,113 +287,8 @@ def detalle(turno_id: int):
     return obtener_turno(turno_id)
 
 
-@bookings.route("/usuario", methods=['GET'])
-@token_required
-def por_usuario():
-    """
-    Listar turnos del usuario autenticado
-    ---
-    tags:
-      - Turnos
-    security:
-      - Bearer: []
-    responses:
-      200:
-        description: Lista de turnos del usuario autenticado (obtenido del token JWT)
-        schema:
-          type: object
-          properties:
-            turnos:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  vehiculo_id:
-                    type: integer
-                  matricula:
-                    type: string
-                  fecha:
-                    type: string
-                  estado:
-                    type: string
-                  creado_por:
-                    type: integer
-                  nombre_creador:
-                    type: string
-            total:
-              type: integer
-      401:
-        description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-    """
-    return listar_turnos_por_usuario()
 
 
-@bookings.route("/vehiculo/<string:matricula>", methods=['GET'])
-@token_required
-def por_vehiculo(matricula: str):
-    """
-    Listar turnos de un vehículo
-    ---
-    tags:
-      - Turnos
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: matricula
-        type: string
-        required: true
-        description: Matrícula del vehículo
-    responses:
-      200:
-        description: Lista de turnos del vehículo
-        schema:
-          type: object
-          properties:
-            turnos:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  vehiculo_id:
-                    type: integer
-                  matricula:
-                    type: string
-                  fecha:
-                    type: string
-                  estado:
-                    type: string
-                  creado_por:
-                    type: integer
-                  nombre_creador:
-                    type: string
-            total:
-              type: integer
-      400:
-        description: Vehículo no encontrado
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-      401:
-        description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-    """
-    return listar_turnos_por_vehiculo(matricula)
 
 
 @bookings.route("", methods=['GET'])

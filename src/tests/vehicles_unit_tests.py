@@ -86,7 +86,7 @@ def get_auth_token(client, app, mail="test_vehicle@example.com", password="passw
             "mail": mail,
             "contrasenia": password
         }
-        response = client.post('/api/users/login', json=login_data)
+        response = client.post('/api/users/sessions', json=login_data)
         return response.get_json()['token']
 
 
@@ -278,7 +278,7 @@ def test_register_vehicle_without_token(client, app):
 
 
 # ========================================
-# TESTS PARA /api/vehicles/{matricula} (GET - Profile)
+# TESTS PARA /api/vehicles/{matricula}
 # ========================================
 
 def test_get_vehicle_profile_success(client, app):
@@ -314,7 +314,7 @@ def test_get_vehicle_profile_success(client, app):
         db.session.commit()
         
         # Obtener perfil
-        response = client.get('/api/vehicles/profile/GET123', headers=headers)
+        response = client.get('/api/vehicles/GET123', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -330,7 +330,7 @@ def test_get_vehicle_profile_not_found(client, app):
         token = get_auth_token(client, app)
         headers = {'Authorization': f'Bearer {token}'}
         
-        response = client.get('/api/vehicles/profile/NOEXISTE', headers=headers)
+        response = client.get('/api/vehicles/NOEXISTE', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()

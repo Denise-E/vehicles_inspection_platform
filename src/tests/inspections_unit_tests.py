@@ -93,7 +93,7 @@ def get_auth_token(client, app, mail="test_inspect@example.com", password="passw
             "mail": mail,
             "contrasenia": password
         }
-        response = client.post('/api/users/login', json=login_data)
+        response = client.post('/api/users/sessions', json=login_data)
         return response.get_json()['token']
 
 

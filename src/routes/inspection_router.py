@@ -5,8 +5,6 @@ from src.controllers.inspection_controller import (
     register_chequeos,
     close_inspection,
     get_inspection,
-    list_inspections_by_vehiculo,
-    list_inspections_by_inspector,
     list_all_inspections
 )
 
@@ -193,7 +191,88 @@ def registrar_chequeos(inspeccion_id: int):
     return register_chequeos(inspeccion_id)
 
 
-@inspections.route("/<int:inspeccion_id>/cerrar", methods=['POST'])
+
+
+@inspections.route("/<int:inspeccion_id>", methods=['GET'])
+@token_required
+def detalle(inspeccion_id: int):
+    """
+    Obtener detalles de una inspección
+    
+    Autorización:
+    - ADMIN e INSPECTOR: pueden ver cualquier inspección
+    - DUENIO: solo puede ver inspecciones de sus propios vehículos
+    ---
+    tags:
+      - Inspecciones
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: inspeccion_id
+        type: integer
+        required: true
+        description: ID de la inspección
+    responses:
+      200:
+        description: Detalles de la inspección
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+            turno_id:
+              type: integer
+            vehiculo_matricula:
+              type: string
+            inspector_nombre:
+              type: string
+            fecha:
+              type: string
+              format: date-time
+            puntuacion_total:
+              type: integer
+            resultado:
+              type: string
+            observacion:
+              type: string
+            estado:
+              type: string
+            chequeos:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  item_numero:
+                    type: integer
+                  descripcion:
+                    type: string
+                  puntuacion:
+                    type: integer
+                  fecha:
+                    type: string
+                    format: date-time
+      400:
+        description: Inspección no encontrada
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      401:
+        description: Token no proporcionado o inválido
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+    """
+    return get_inspection(inspeccion_id)
+
+
+@inspections.route("/<int:inspeccion_id>", methods=['PATCH'])
 @token_required
 @role_required('ADMIN', 'INSPECTOR')
 def cerrar(inspeccion_id: int):
@@ -293,223 +372,8 @@ def cerrar(inspeccion_id: int):
     return close_inspection(inspeccion_id)
 
 
-@inspections.route("/<int:inspeccion_id>", methods=['GET'])
-@token_required
-def detalle(inspeccion_id: int):
-    """
-    Obtener detalles de una inspección
-    
-    Autorización:
-    - ADMIN e INSPECTOR: pueden ver cualquier inspección
-    - DUENIO: solo puede ver inspecciones de sus propios vehículos
-    ---
-    tags:
-      - Inspecciones
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: inspeccion_id
-        type: integer
-        required: true
-        description: ID de la inspección
-    responses:
-      200:
-        description: Detalles de la inspección
-        schema:
-          type: object
-          properties:
-            id:
-              type: integer
-            turno_id:
-              type: integer
-            vehiculo_matricula:
-              type: string
-            inspector_nombre:
-              type: string
-            fecha:
-              type: string
-              format: date-time
-            puntuacion_total:
-              type: integer
-            resultado:
-              type: string
-            observacion:
-              type: string
-            estado:
-              type: string
-            chequeos:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  item_numero:
-                    type: integer
-                  descripcion:
-                    type: string
-                  puntuacion:
-                    type: integer
-                  fecha:
-                    type: string
-                    format: date-time
-      400:
-        description: Inspección no encontrada
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-      401:
-        description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-    """
-    return get_inspection(inspeccion_id)
 
 
-@inspections.route("/vehiculo/<string:matricula>", methods=['GET'])
-@token_required
-def por_vehiculo(matricula: str):
-    """
-    Listar inspecciones de un vehículo
-    
-    Autorización:
-    - ADMIN e INSPECTOR: pueden ver inspecciones de cualquier vehículo
-    - DUENIO: solo puede ver inspecciones de sus propios vehículos
-    ---
-    tags:
-      - Inspecciones
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: matricula
-        type: string
-        required: true
-        description: Matrícula del vehículo
-    responses:
-      200:
-        description: Lista de inspecciones del vehículo
-        schema:
-          type: object
-          properties:
-            inspecciones:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  turno_id:
-                    type: integer
-                  vehiculo_matricula:
-                    type: string
-                  inspector_nombre:
-                    type: string
-                  fecha:
-                    type: string
-                    format: date-time
-                  puntuacion_total:
-                    type: integer
-                  resultado:
-                    type: string
-                  observacion:
-                    type: string
-                  estado:
-                    type: string
-            total:
-              type: integer
-      400:
-        description: Vehículo no encontrado
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-      401:
-        description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-    """
-    return list_inspections_by_vehiculo(matricula)
-
-
-@inspections.route("/inspector/<int:inspector_id>", methods=['GET'])
-@token_required
-def por_inspector(inspector_id: int):
-    """
-    Listar inspecciones de un inspector
-    
-    Autorización:
-    - ADMIN: puede ver inspecciones de cualquier inspector
-    - INSPECTOR: solo puede ver sus propias inspecciones
-    ---
-    tags:
-      - Inspecciones
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: inspector_id
-        type: integer
-        required: true
-        description: ID del inspector
-    responses:
-      200:
-        description: Lista de inspecciones del inspector
-        schema:
-          type: object
-          properties:
-            inspecciones:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  turno_id:
-                    type: integer
-                  vehiculo_matricula:
-                    type: string
-                  inspector_nombre:
-                    type: string
-                  fecha:
-                    type: string
-                    format: date-time
-                  puntuacion_total:
-                    type: integer
-                  resultado:
-                    type: string
-                  observacion:
-                    type: string
-                  estado:
-                    type: string
-            total:
-              type: integer
-      400:
-        description: Inspector no encontrado
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-      401:
-        description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-    """
-    return list_inspections_by_inspector(inspector_id)
 
 
 @inspections.route("", methods=['GET'])

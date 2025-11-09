@@ -77,12 +77,12 @@ def get_auth_token(client, app, mail="test@example.com", password="password123",
             "mail": mail,
             "contrasenia": password
         }
-        response = client.post('/api/users/login', json=login_data)
+        response = client.post('/api/users/sessions', json=login_data)
         return response.get_json()['token']
 
 
 # ========================================
-# TESTS PARA /api/users/register
+# TESTS PARA /api/users
 # ========================================
 
 def test_register_user_success(client, app):
@@ -96,7 +96,7 @@ def test_register_user_success(client, app):
             "rol": "DUENIO"
         }
         
-        response = client.post('/api/users/register', json=data)
+        response = client.post('/api/users', json=data)
         
         assert response.status_code == 201
         response_data = response.get_json()
@@ -118,7 +118,7 @@ def test_register_user_short_password(client, app):
             "rol": "DUENIO"
         }
         
-        response = client.post('/api/users/register', json=data)
+        response = client.post('/api/users', json=data)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -150,7 +150,7 @@ def test_register_user_duplicate_email(client, app):
             "rol": "DUENIO"
         }
         
-        response = client.post('/api/users/register', json=data)
+        response = client.post('/api/users', json=data)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -158,7 +158,7 @@ def test_register_user_duplicate_email(client, app):
 
 
 # ========================================
-# TESTS PARA /api/users/login
+# TESTS PARA /api/users/sessions (login)
 # ========================================
 
 def test_login_user_success(client, app):
@@ -183,7 +183,7 @@ def test_login_user_success(client, app):
             "contrasenia": "mypassword123"
         }
         
-        response = client.post('/api/users/login', json=data)
+        response = client.post('/api/users/sessions', json=data)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -216,7 +216,7 @@ def test_login_user_invalid_password(client, app):
             "contrasenia": "wrongpassword"
         }
         
-        response = client.post('/api/users/login', json=data)
+        response = client.post('/api/users/sessions', json=data)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -232,7 +232,7 @@ def test_login_user_email_not_found(client, app):
             "contrasenia": "password123"
         }
         
-        response = client.post('/api/users/login', json=data)
+        response = client.post('/api/users/sessions', json=data)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -241,7 +241,7 @@ def test_login_user_email_not_found(client, app):
 
 
 # ========================================
-# TESTS PARA /api/users/profile/{user_id}
+# TESTS PARA /api/users/{user_id} 
 # ========================================
 
 def test_get_user_profile_success(client, app):
@@ -266,7 +266,7 @@ def test_get_user_profile_success(client, app):
         headers = {'Authorization': f'Bearer {token}'}
         
         # Obtener perfil
-        response = client.get(f'/api/users/profile/{user_id}', headers=headers)
+        response = client.get(f'/api/users/{user_id}', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -280,7 +280,7 @@ def test_get_user_profile_without_token(client, app):
     """Test: Obtener perfil falla sin token JWT"""
     with app.app_context():
         # Intentar obtener perfil sin token
-        response = client.get('/api/users/profile/1')
+        response = client.get('/api/users/1')
         
         assert response.status_code == 401
         response_data = response.get_json()
@@ -295,7 +295,7 @@ def test_get_user_profile_not_found(client, app):
         headers = {'Authorization': f'Bearer {token}'}
         
         # Intentar obtener perfil con ID 999 (no existente)
-        response = client.get('/api/users/profile/999', headers=headers)
+        response = client.get('/api/users/999', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
