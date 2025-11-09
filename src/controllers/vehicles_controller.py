@@ -135,8 +135,7 @@ def update_vehicle(matricula: str) -> Tuple[dict, int]:
         # Validar request con Pydantic
         data = VehicleUpdateRequest(**request.json)
         
-        # Actualizar vehículo
-        vehicle = VehicleService.update_vehicle(matricula, data.model_dump())
+        vehicle = VehicleService.update_vehicle(matricula, data.model_dump(exclude_none=True))
         
         # Preparar response
         response_data = {

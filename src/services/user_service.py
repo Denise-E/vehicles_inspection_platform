@@ -10,6 +10,11 @@ class UserService:
         """
         Crea un nuevo usuario en la base de datos.
         """
+        # Validar que el email no esté ya registrado
+        existing_user = Usuario.query.filter_by(mail=data["mail"]).first()
+        if existing_user:
+            raise ValueError("El email ya se encuentra registrado")
+        
         rol_nombre = data["rol"].upper()
         rol = UsuarioRol.query.filter_by(nombre=rol_nombre).first()
         

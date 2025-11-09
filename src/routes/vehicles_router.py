@@ -215,12 +215,9 @@ def actualizar(matricula: str):
       - in: body
         name: body
         required: true
+        description: Al menos un campo debe ser proporcionado
         schema:
           type: object
-          required:
-            - marca
-            - modelo
-            - anio
           properties:
             marca:
               type: string
