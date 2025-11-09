@@ -18,7 +18,7 @@ inspections = Blueprint('inspections', __name__)
 @role_required(['INSPECTOR'])
 def crear():
     """
-    Crea una nueva inspección asociada a un turno. Requiere autenticación JWT y rol INSPECTOR.
+    Crear una nueva inspección
     ---
     tags:
       - Inspecciones
@@ -97,7 +97,7 @@ def crear():
 @role_required(['INSPECTOR'])
 def registrar_chequeos(inspeccion_id: int):
     """
-    Registra los 8 chequeos de una inspección. Requiere autenticación JWT y rol INSPECTOR.
+    Registrar los 8 chequeos de una inspección
     ---
     tags:
       - Inspecciones
@@ -198,13 +198,12 @@ def registrar_chequeos(inspeccion_id: int):
 @role_required(['INSPECTOR'])
 def cerrar(inspeccion_id: int):
     """
-    Cierra una inspección, calcula el resultado y actualiza el estado del vehículo. 
-    Requiere autenticación JWT y rol INSPECTOR.
+    Cerrar una inspección y calcular resultado
     
-    REGLAS DE NEGOCIO:
-    - SEGURO: suma > 80 Y ningún chequeo < 5
-    - RECHEQUEAR: suma < 40 O algún chequeo < 5
-    - Si RECHEQUEAR, observación es OBLIGATORIA (mínimo 10 caracteres)
+    Reglas de negocio:
+    - SEGURO: suma > 80 y ningún chequeo < 5
+    - RECHEQUEAR: suma < 40 o algún chequeo < 5
+    - Si RECHEQUEAR, observación es obligatoria (mínimo 10 caracteres)
     ---
     tags:
       - Inspecciones
@@ -298,7 +297,7 @@ def cerrar(inspeccion_id: int):
 @token_required
 def detalle(inspeccion_id: int):
     """
-    Obtiene una inspección por su ID con todos sus chequeos. Requiere autenticación JWT.
+    Obtener detalles de una inspección
     ---
     tags:
       - Inspecciones
@@ -373,7 +372,7 @@ def detalle(inspeccion_id: int):
 @token_required
 def por_vehiculo(matricula: str):
     """
-    Lista todas las inspecciones de un vehículo por matrícula. Requiere autenticación JWT.
+    Listar inspecciones de un vehículo
     ---
     tags:
       - Inspecciones
@@ -439,7 +438,7 @@ def por_vehiculo(matricula: str):
 @token_required
 def por_inspector(inspector_id: int):
     """
-    Lista todas las inspecciones realizadas por un inspector. Requiere autenticación JWT.
+    Listar inspecciones de un inspector
     ---
     tags:
       - Inspecciones
@@ -505,7 +504,7 @@ def por_inspector(inspector_id: int):
 @token_required
 def listar_todas():
     """
-    Lista todas las inspecciones del sistema (para vista admin). Requiere autenticación JWT.
+    Listar todas las inspecciones del sistema
     ---
     tags:
       - Inspecciones
