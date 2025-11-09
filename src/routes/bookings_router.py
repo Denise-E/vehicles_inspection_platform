@@ -3,8 +3,7 @@ from src.utils.jwt_utils import token_required
 from src.controllers.booking_controller import (
     consultar_disponibilidad,
     reservar_turno,
-    confirmar_turno,
-    cancelar_turno,
+    actualizar_turno,
     obtener_turno,
     listar_turnos_por_usuario,
     listar_turnos_por_vehiculo,
@@ -154,11 +153,11 @@ def crear():
     return reservar_turno()
 
 
-@bookings.route("/<int:turno_id>/confirmar", methods=['PUT'])
+@bookings.route("/<int:turno_id>", methods=['PUT'])
 @token_required
-def confirmar(turno_id: int):
+def actualizar(turno_id: int):
     """
-    Confirmar un turno
+    Actualizar el estado de un turno
     ---
     tags:
       - Turnos
@@ -169,10 +168,32 @@ def confirmar(turno_id: int):
         name: turno_id
         type: integer
         required: true
-        description: ID del turno a confirmar
+        description: ID del turno a actualizar
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - estado_id
+          properties:
+            estado_id:
+              type: integer
+              example: 2
+              description: |
+                ID del nuevo estado:
+                - 1: RESERVADO
+                - 2: CONFIRMADO
+                - 3: COMPLETADO
+                - 4: CANCELADO
+                
+                Transiciones válidas:
+                - RESERVADO → CONFIRMADO o CANCELADO
+                - CONFIRMADO → COMPLETADO o CANCELADO
+                - COMPLETADO y CANCELADO son estados finales
     responses:
       200:
-        description: Turno confirmado exitosamente (estado CONFIRMADO)
+        description: Estado del turno actualizado exitosamente
         schema:
           type: object
           properties:
@@ -192,12 +213,13 @@ def confirmar(turno_id: int):
             nombre_creador:
               type: string
       400:
-        description: Turno no encontrado o no está en estado RESERVADO
+        description: Turno no encontrado, estado inválido o transición de estado no permitida
         schema:
           type: object
           properties:
             error:
               type: string
+              example: "Transición de estado inválida: COMPLETADO → RESERVADO"
       401:
         description: Token no proporcionado o inválido
         schema:
@@ -206,62 +228,7 @@ def confirmar(turno_id: int):
             error:
               type: string
     """
-    return confirmar_turno(turno_id)
-
-
-@bookings.route("/<int:turno_id>/cancelar", methods=['PUT'])
-@token_required
-def cancelar(turno_id: int):
-    """
-    Cancelar un turno
-    ---
-    tags:
-      - Turnos
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: turno_id
-        type: integer
-        required: true
-        description: ID del turno a cancelar
-    responses:
-      200:
-        description: Turno cancelado exitosamente (estado CANCELADO)
-        schema:
-          type: object
-          properties:
-            id:
-              type: integer
-            vehiculo_id:
-              type: integer
-            matricula:
-              type: string
-            fecha:
-              type: string
-            estado:
-              type: string
-              example: CANCELADO
-            creado_por:
-              type: integer
-            nombre_creador:
-              type: string
-      400:
-        description: Turno no encontrado o no puede ser cancelado
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-      401:
-        description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-    """
-    return cancelar_turno(turno_id)
+    return actualizar_turno(turno_id)
 
 
 @bookings.route("/<int:turno_id>", methods=['GET'])

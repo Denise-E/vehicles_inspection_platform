@@ -44,6 +44,19 @@ class BookingCreateRequest(BaseModel):
         return v
 
 
+class BookingUpdateRequest(BaseModel):
+    """Request para actualizar el estado de un turno"""
+    estado_id: int
+    
+    @field_validator('estado_id')
+    @classmethod
+    def validate_estado_id(cls, v: int) -> int:
+        # Validar que el estado_id sea uno de los válidos: 1-RESERVADO, 2-CONFIRMADO, 3-COMPLETADO, 4-CANCELADO
+        if v not in [1, 2, 3, 4]:
+            raise ValueError('estado_id inválido. Debe ser 1 (RESERVADO), 2 (CONFIRMADO), 3 (COMPLETADO) o 4 (CANCELADO)')
+        return v
+
+
 # Response schemas
 class SlotDisponible(BaseModel):
     """Representa un slot de tiempo disponible"""

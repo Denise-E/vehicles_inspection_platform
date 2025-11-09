@@ -540,11 +540,11 @@ def test_reservar_turno_admin_cualquier_vehiculo(client, app, setup_data):
 
 
 # ========================================
-# TESTS PARA /api/bookings/{id}/confirmar
+# TESTS PARA PUT /api/bookings/{id} (Actualizar estado)
 # ========================================
 
-def test_confirmar_turno_success(client, app, setup_data):
-    """Test: Confirmar turno exitosamente con JWT"""
+def test_actualizar_estado_reservado_a_confirmado(client, app, setup_data):
+    """Test: Actualizar estado de RESERVADO a CONFIRMADO exitosamente con JWT"""
     with app.app_context():
         # Obtener token
         token = get_auth_token(client, app)
@@ -571,8 +571,9 @@ def test_confirmar_turno_success(client, app, setup_data):
         db.session.commit()
         turno_id = turno.id
         
-        # Confirmar el turno
-        response = client.put(f'/api/bookings/{turno_id}/confirmar', headers=headers)
+        # Actualizar estado a CONFIRMADO (id=2)
+        data = {"estado_id": 2}
+        response = client.put(f'/api/bookings/{turno_id}', json=data, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -580,62 +581,8 @@ def test_confirmar_turno_success(client, app, setup_data):
         assert response_data['id'] == turno_id
 
 
-def test_confirmar_turno_no_encontrado(client, app):
-    """Test: Confirmar turno falla si el turno no existe con JWT"""
-    with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
-        headers = {'Authorization': f'Bearer {token}'}
-        
-        response = client.put('/api/bookings/999/confirmar', headers=headers)
-        
-        assert response.status_code == 400
-        response_data = response.get_json()
-        assert 'error' in response_data
-
-
-def test_confirmar_turno_estado_invalido(client, app, setup_data):
-    """Test: Confirmar turno falla si ya está en otro estado con JWT"""
-    with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
-        headers = {'Authorization': f'Bearer {token}'}
-        
-        # Crear un turno en estado CANCELADO
-        today = datetime.now()
-        days_ahead = 0 - today.weekday()
-        if days_ahead <= 0:
-            days_ahead += 7
-        next_monday = today + timedelta(days=days_ahead)
-        fecha_turno = next_monday.replace(hour=12, minute=0, second=0, microsecond=0)
-        
-        estado_cancelado = EstadoTurno.query.filter_by(nombre='CANCELADO').first()
-        vehiculo = Vehiculo.query.filter_by(matricula=setup_data["matricula"]).first()
-        
-        turno = Turno(
-            vehiculo_id=vehiculo.id,
-            fecha=fecha_turno,
-            estado_id=estado_cancelado.id,
-            creado_por=setup_data["usuario_id"]
-        )
-        db.session.add(turno)
-        db.session.commit()
-        turno_id = turno.id
-        
-        # Intentar confirmar
-        response = client.put(f'/api/bookings/{turno_id}/confirmar', headers=headers)
-        
-        assert response.status_code == 400
-        response_data = response.get_json()
-        assert 'error' in response_data
-
-
-# ========================================
-# TESTS PARA /api/bookings/{id}/cancelar
-# ========================================
-
-def test_cancelar_turno_success(client, app, setup_data):
-    """Test: Cancelar turno exitosamente con JWT"""
+def test_actualizar_estado_reservado_a_cancelado(client, app, setup_data):
+    """Test: Actualizar estado de RESERVADO a CANCELADO exitosamente con JWT"""
     with app.app_context():
         # Obtener token
         token = get_auth_token(client, app)
@@ -647,7 +594,7 @@ def test_cancelar_turno_success(client, app, setup_data):
         if days_ahead <= 0:
             days_ahead += 7
         next_monday = today + timedelta(days=days_ahead)
-        fecha_turno = next_monday.replace(hour=13, minute=0, second=0, microsecond=0)
+        fecha_turno = next_monday.replace(hour=12, minute=0, second=0, microsecond=0)
         
         estado_reservado = EstadoTurno.query.filter_by(nombre='RESERVADO').first()
         vehiculo = Vehiculo.query.filter_by(matricula=setup_data["matricula"]).first()
@@ -662,8 +609,9 @@ def test_cancelar_turno_success(client, app, setup_data):
         db.session.commit()
         turno_id = turno.id
         
-        # Cancelar el turno
-        response = client.put(f'/api/bookings/{turno_id}/cancelar', headers=headers)
+        # Actualizar estado a CANCELADO (id=4)
+        data = {"estado_id": 4}
+        response = client.put(f'/api/bookings/{turno_id}', json=data, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -671,8 +619,136 @@ def test_cancelar_turno_success(client, app, setup_data):
         assert response_data['id'] == turno_id
 
 
+def test_actualizar_estado_confirmado_a_completado(client, app, setup_data):
+    """Test: Actualizar estado de CONFIRMADO a COMPLETADO exitosamente con JWT"""
+    with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Crear un turno en estado CONFIRMADO
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=13, minute=0, second=0, microsecond=0)
+        
+        estado_confirmado = EstadoTurno.query.filter_by(nombre='CONFIRMADO').first()
+        vehiculo = Vehiculo.query.filter_by(matricula=setup_data["matricula"]).first()
+        
+        turno = Turno(
+            vehiculo_id=vehiculo.id,
+            fecha=fecha_turno,
+            estado_id=estado_confirmado.id,
+            creado_por=setup_data["usuario_id"]
+        )
+        db.session.add(turno)
+        db.session.commit()
+        turno_id = turno.id
+        
+        # Actualizar estado a COMPLETADO (id=3)
+        data = {"estado_id": 3}
+        response = client.put(f'/api/bookings/{turno_id}', json=data, headers=headers)
+        
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert response_data['estado'] == 'COMPLETADO'
+        assert response_data['id'] == turno_id
+
+
+def test_actualizar_estado_transicion_invalida(client, app, setup_data):
+    """Test: Falla al intentar transición de estado inválida con JWT"""
+    with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Crear un turno en estado COMPLETADO (estado final)
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=14, minute=0, second=0, microsecond=0)
+        
+        estado_completado = EstadoTurno.query.filter_by(nombre='COMPLETADO').first()
+        vehiculo = Vehiculo.query.filter_by(matricula=setup_data["matricula"]).first()
+        
+        turno = Turno(
+            vehiculo_id=vehiculo.id,
+            fecha=fecha_turno,
+            estado_id=estado_completado.id,
+            creado_por=setup_data["usuario_id"]
+        )
+        db.session.add(turno)
+        db.session.commit()
+        turno_id = turno.id
+        
+        # Intentar cambiar a RESERVADO (transición inválida)
+        data = {"estado_id": 1}
+        response = client.put(f'/api/bookings/{turno_id}', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+        assert 'Transición de estado inválida' in response_data['error']
+
+
+def test_actualizar_estado_id_invalido(client, app, setup_data):
+    """Test: Falla con estado_id inválido con JWT"""
+    with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Crear un turno en estado RESERVADO
+        today = datetime.now()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        next_monday = today + timedelta(days=days_ahead)
+        fecha_turno = next_monday.replace(hour=15, minute=0, second=0, microsecond=0)
+        
+        estado_reservado = EstadoTurno.query.filter_by(nombre='RESERVADO').first()
+        vehiculo = Vehiculo.query.filter_by(matricula=setup_data["matricula"]).first()
+        
+        turno = Turno(
+            vehiculo_id=vehiculo.id,
+            fecha=fecha_turno,
+            estado_id=estado_reservado.id,
+            creado_por=setup_data["usuario_id"]
+        )
+        db.session.add(turno)
+        db.session.commit()
+        turno_id = turno.id
+        
+        # Intentar actualizar con estado_id inválido (99)
+        data = {"estado_id": 99}
+        response = client.put(f'/api/bookings/{turno_id}', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
+def test_actualizar_estado_turno_no_existe(client, app):
+    """Test: Falla si el turno no existe con JWT"""
+    with app.app_context():
+        # Obtener token
+        token = get_auth_token(client, app)
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        data = {"estado_id": 2}
+        response = client.put('/api/bookings/999', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+
+
 # ========================================
-# TESTS PARA /api/bookings/{id}
+# TESTS PARA GET /api/bookings/{id}
 # ========================================
 
 def test_obtener_turno_success(client, app, setup_data):
@@ -840,26 +916,6 @@ def test_reservar_without_token(client, app, setup_data):
             "fecha": fecha_turno.strftime('%Y-%m-%d %H:%M')
         }
         response = client.post('/api/bookings', json=data)
-        
-        assert response.status_code == 401
-        response_data = response.get_json()
-        assert 'error' in response_data
-
-
-def test_confirmar_without_token(client, app):
-    """Test: Confirmar turno falla sin token JWT"""
-    with app.app_context():
-        response = client.put('/api/bookings/1/confirmar')
-        
-        assert response.status_code == 401
-        response_data = response.get_json()
-        assert 'error' in response_data
-
-
-def test_cancelar_without_token(client, app):
-    """Test: Cancelar turno falla sin token JWT"""
-    with app.app_context():
-        response = client.put('/api/bookings/1/cancelar')
         
         assert response.status_code == 401
         response_data = response.get_json()

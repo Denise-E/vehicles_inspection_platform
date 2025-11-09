@@ -100,7 +100,7 @@ class BookingService:
         
         if user_role != 'ADMIN':
             if vehiculo.duenio_id != data["creado_por"]:
-                raise ValueError(f"No tienes permiso para crear turnos para este vehículo. Solo puedes crear turnos para tus propios vehículos")
+                raise ValueError("No tienes permiso para crear turnos para este vehículo. Solo puedes crear turnos para tus propios vehículos")
             
             if vehiculo.estado.nombre != 'ACTIVO':
                 raise ValueError(f"No puedes crear turnos para un vehículo en estado {vehiculo.estado.nombre}. El vehículo debe estar ACTIVO")
@@ -149,60 +149,51 @@ class BookingService:
         return nuevo_turno
 
     @staticmethod
-    def confirmar_booking(turno_id: int) -> Turno:
+    def update_booking_status(turno_id: int, nuevo_estado_id: int) -> Turno:
         """
-        Confirma un turno (cambia estado a CONFIRMADO).
+        Actualiza el estado de un turno de forma genérica.
+        
+        Transiciones de estado válidas:
+        - RESERVADO (1) → CONFIRMADO (2) o CANCELADO (4)
+        - CONFIRMADO (2) → COMPLETADO (3) o CANCELADO (4)
+        - COMPLETADO (3) → No permite cambios
+        - CANCELADO (4) → No permite cambios
         
         Args:
             turno_id: ID del turno
+            nuevo_estado_id: ID del nuevo estado (1-RESERVADO, 2-CONFIRMADO, 3-COMPLETADO, 4-CANCELADO)
             
         Returns:
-            Turno confirmado
+            Turno actualizado
         """
         turno = Turno.query.filter_by(id=turno_id).first()
         if not turno:
             raise ValueError(f"Turno con ID {turno_id} no encontrado")
         
-        # Solo se puede confirmar un turno en estado RESERVADO
-        if turno.estado.nombre != "RESERVADO":
-            raise ValueError(f"Solo se pueden confirmar turnos en estado RESERVADO. Estado actual: {turno.estado.nombre}")
+        # Obtener el nuevo estado
+        nuevo_estado = EstadoTurno.query.filter_by(id=nuevo_estado_id).first()
+        if not nuevo_estado:
+            raise ValueError(f"Estado con ID {nuevo_estado_id} no encontrado")
         
-        # Obtener estado CONFIRMADO (id=2)
-        estado_confirmado = EstadoTurno.query.filter_by(nombre="CONFIRMADO").first()
-        if not estado_confirmado:
-            raise ValueError("Estado CONFIRMADO no encontrado en la base de datos")
+        estado_actual = turno.estado.nombre
+        estado_nuevo = nuevo_estado.nombre
         
-        turno.estado_id = estado_confirmado.id
-        db.session.commit()
-        db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
+        # Validar transiciones de estado permitidas
+        transiciones_validas = {
+            "RESERVADO": ["CONFIRMADO", "CANCELADO"],
+            "CONFIRMADO": ["COMPLETADO", "CANCELADO"],
+            "COMPLETADO": [],  # Estado final, no permite cambios
+            "CANCELADO": []    # Estado final, no permite cambios
+        }
         
-        return turno
-
-    @staticmethod
-    def cancelar_booking(turno_id: int) -> Turno:
-        """
-        Cancela un turno (cambia estado a CANCELADO).
+        if estado_nuevo not in transiciones_validas.get(estado_actual, []):
+            raise ValueError(
+                f"Transición de estado inválida: {estado_actual} → {estado_nuevo}. "
+                f"Transiciones permitidas desde {estado_actual}: {', '.join(transiciones_validas.get(estado_actual, [])) or 'ninguna'}"
+            )
         
-        Args:
-            turno_id: ID del turno
-            
-        Returns:
-            Turno cancelado
-        """
-        turno = Turno.query.filter_by(id=turno_id).first()
-        if not turno:
-            raise ValueError(f"Turno con ID {turno_id} no encontrado")
-        
-        # Solo se pueden cancelar turnos RESERVADO o CONFIRMADO
-        if turno.estado.nombre not in ["RESERVADO", "CONFIRMADO"]:
-            raise ValueError(f"No se puede cancelar un turno en estado {turno.estado.nombre}")
-        
-        # Obtener estado CANCELADO (id=4)
-        estado_cancelado = EstadoTurno.query.filter_by(nombre="CANCELADO").first()
-        if not estado_cancelado:
-            raise ValueError("Estado CANCELADO no encontrado en la base de datos")
-        
-        turno.estado_id = estado_cancelado.id
+        # Actualizar el estado
+        turno.estado_id = nuevo_estado_id
         db.session.commit()
         db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
         

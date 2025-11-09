@@ -3,6 +3,7 @@ from src.schemas.booking_schemas import (
     DisponibilidadRequest,
     DisponibilidadResponse,
     BookingCreateRequest,
+    BookingUpdateRequest,
     BookingResponse,
     BookingListResponse
 )
@@ -83,52 +84,22 @@ def reservar_turno() -> Tuple[dict, int]:
         return jsonify({"error": str(e)}), 400
 
 
-def confirmar_turno(turno_id: int) -> Tuple[dict, int]:
+def actualizar_turno(turno_id: int) -> Tuple[dict, int]:
     """
-    Confirma un turno (cambia estado a CONFIRMADO).
+    Actualiza el estado de un turno.
     
     Args:
-        turno_id: ID del turno a confirmar
+        turno_id: ID del turno a actualizar
         
     Returns:
         Tuple con (response_json, status_code)
     """
     try:
-        # Confirmar turno
-        turno = BookingService.confirmar_booking(turno_id)
+        # Validar request body con Pydantic
+        data = BookingUpdateRequest(**request.json)
         
-        # Preparar response
-        response_data = {
-            "id": turno.id,
-            "vehiculo_id": turno.vehiculo_id,
-            "matricula": turno.vehiculo.matricula,
-            "fecha": turno.fecha.strftime('%Y-%m-%d %H:%M'),
-            "estado": turno.estado.nombre,
-            "creado_por": turno.creado_por,
-            "nombre_creador": turno.creador.nombre_completo
-        }
-        
-        # Validar response con Pydantic
-        response = BookingResponse(**response_data)
-        return jsonify(response.model_dump()), 200
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-def cancelar_turno(turno_id: int) -> Tuple[dict, int]:
-    """
-    Cancela un turno (cambia estado a CANCELADO).
-    
-    Args:
-        turno_id: ID del turno a cancelar
-        
-    Returns:
-        Tuple con (response_json, status_code)
-    """
-    try:
-        # Cancelar turno
-        turno = BookingService.cancelar_booking(turno_id)
+        # Actualizar estado del turno
+        turno = BookingService.update_booking_status(turno_id, data.estado_id)
         
         # Preparar response
         response_data = {
