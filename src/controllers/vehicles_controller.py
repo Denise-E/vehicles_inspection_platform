@@ -100,9 +100,17 @@ def list_all_vehicles() -> Tuple[dict, int]:
 
 def update_vehicle(matricula: str) -> Tuple[dict, int]:
     try:
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
         data = VehicleUpdateRequest(**request.json)
         
-        vehicle = VehicleService.update_vehicle(matricula, data.model_dump(exclude_none=True))
+        vehicle = VehicleService.update_vehicle(
+            matricula, 
+            data.model_dump(exclude_none=True),
+            user_id=user_id,
+            user_role=user_role
+        )
         
         response_data = {
             "id": vehicle.id,

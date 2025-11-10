@@ -69,13 +69,22 @@ class VehicleService:
         return vehicles
 
     @staticmethod
-    def update_vehicle(matricula: str, data: dict) -> Vehiculo:
+    def update_vehicle(matricula: str, data: dict, user_id: int = None, user_role: str = None) -> Vehiculo:
         """
         Actualiza un vehículo existente.
+        - ADMIN puede actualizar cualquier vehículo
+        - DUENIO solo puede actualizar sus propios vehículos
         """
         vehicle = Vehiculo.query.filter_by(matricula=matricula).first()
         if not vehicle:
             raise ValueError(f"Vehículo con matrícula {matricula} no encontrado")
+        
+        if vehicle.estado_id == 2: # Estado 2 = INACTIVO
+            raise ValueError("No se puede actualizar un vehículo INACTIVO")
+        
+        if user_role and user_role != 'ADMIN':
+            if vehicle.duenio_id != user_id:
+                raise ValueError("No tienes permiso para actualizar este vehículo")
         
         vehicle.marca = data.get("marca", vehicle.marca)
         vehicle.modelo = data.get("modelo", vehicle.modelo)

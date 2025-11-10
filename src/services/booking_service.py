@@ -70,7 +70,6 @@ class BookingService:
     def create_booking(data: dict, user_role: str = None) -> Turno:
         """
         Crea un nuevo turno.
-        
         """
         vehiculo = Vehiculo.query.filter_by(matricula=data["matricula"]).first()
         if not vehiculo:
@@ -80,12 +79,12 @@ class BookingService:
         if not usuario:
             raise ValueError(f"Usuario con ID {data['creado_por']} no encontrado")
         
+        if vehiculo.estado_id == 2:  # 2 = INACTIVO
+            raise ValueError("No se puede crear un turno para un vehículo INACTIVO")
+        
         if user_role != 'ADMIN':
             if vehiculo.duenio_id != data["creado_por"]:
                 raise ValueError("No tienes permiso para crear turnos para este vehículo. Solo puedes crear turnos para tus propios vehículos")
-            
-            if vehiculo.estado.nombre != 'ACTIVO':
-                raise ValueError(f"No puedes crear turnos para un vehículo en estado {vehiculo.estado.nombre}. El vehículo debe estar ACTIVO")
         
         fecha_turno = datetime.strptime(data["fecha"], '%Y-%m-%d %H:%M')
         
@@ -129,7 +128,7 @@ class BookingService:
     @staticmethod
     def update_booking_status(turno_id: int, nuevo_estado_id: int, user_id: int = None, user_role: str = None) -> Turno:
         """
-        Actualiza el estado de un turno de forma genérica.
+        Actualiza el estado de un turno.
         
         Reglas de negocio:
         - Estados COMPLETADO (3) y CANCELADO (4) son finales, no permiten cambios
@@ -145,6 +144,10 @@ class BookingService:
         turno = Turno.query.filter_by(id=turno_id).first()
         if not turno:
             raise ValueError(f"Turno con ID {turno_id} no encontrado")
+        
+        # Estado 3 = COMPLETADO. Estado 4 = CANCELADO
+        if turno.estado_id in [3, 4]:
+            raise ValueError(f"No se puede modificar un turno en estado {turno.estado.nombre}")
         
         if user_role != 'ADMIN':
             if turno.vehiculo.duenio_id != user_id:

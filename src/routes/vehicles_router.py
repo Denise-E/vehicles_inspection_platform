@@ -253,12 +253,13 @@ def actualizar(matricula: str):
             nombre_duenio:
               type: string
       400:
-        description: Vehículo no encontrado o datos inválidos
+        description: Vehículo no encontrado, INACTIVO, sin permisos o datos inválidos
         schema:
           type: object
           properties:
             error:
               type: string
+              example: "No se puede actualizar un vehículo INACTIVO"
       401:
         description: Token no proporcionado o inválido
         schema:

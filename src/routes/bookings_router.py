@@ -105,7 +105,7 @@ def crear():
               description: Fecha y hora del turno (Lunes-Viernes 9-20hs)
     responses:
       201:
-        description: Turno creado exitosamente (estado RESERVADO). El creador se obtiene del token JWT. ADMIN puede crear turnos para cualquier vehículo, usuarios normales solo para sus vehículos activos
+        description: Turno creado exitosamente (estado RESERVADO)
         schema:
           type: object
           properties:
@@ -126,13 +126,13 @@ def crear():
             nombre_creador:
               type: string
       400:
-        description: Error en los datos, fecha inválida, turno ya existe o no tiene permiso para el vehículo
+        description: Error - vehículo no encontrado, INACTIVO, no es propietario, fecha inválida o turno ya existe
         schema:
           type: object
           properties:
             error:
               type: string
-              example: "No tienes permiso para crear turnos para este vehículo. Solo puedes crear turnos para tus propios vehículos"
+              example: "No se puede crear un turno para un vehículo INACTIVO"
       401:
         description: Token no proporcionado o inválido
         schema:
@@ -185,11 +185,6 @@ def actualizar(turno_id: int):
                 - 3: COMPLETADO
                 - 4: CANCELADO
                 
-                Reglas de negocio:
-                - Estados COMPLETADO y CANCELADO son finales (no se pueden modificar)
-                - ADMIN puede modificar cualquier turno (excepto estados finales)
-                - Usuarios normales solo pueden modificar turnos de sus propios vehículos
-                
                 Transiciones válidas:
                 - RESERVADO → CONFIRMADO o CANCELADO
                 - CONFIRMADO → COMPLETADO o CANCELADO
@@ -215,7 +210,7 @@ def actualizar(turno_id: int):
             nombre_creador:
               type: string
       400:
-        description: Turno no encontrado, estado inválido, transición no permitida o sin permisos
+        description: Turno no encontrado, en estado final, transición no permitida o sin permisos
         schema:
           type: object
           properties:
