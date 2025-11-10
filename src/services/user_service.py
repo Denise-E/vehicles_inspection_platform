@@ -10,7 +10,6 @@ class UserService:
         """
         Crea un nuevo usuario en la base de datos.
         """
-        # Validar que el email no esté ya registrado
         existing_user = Usuario.query.filter_by(mail=data["mail"]).first()
         if existing_user:
             raise ValueError("El email ya se encuentra registrado")
@@ -21,7 +20,6 @@ class UserService:
         if not rol:
             raise ValueError(f"Rol '{rol_nombre}' no encontrado en la base de datos")
         
-        # Hasheo de la contraseña
         hashed_password = hash_password(data["contrasenia"])
 
         new_user = Usuario(
@@ -39,14 +37,13 @@ class UserService:
         
         # Carga la relación del rol para poder acceder al nombre
         db.session.refresh(new_user, ['rol'])
-
         return new_user
 
 
     @staticmethod
     def login_user(data) -> Usuario:
         """
-        Inicia sesión de un usuario.
+        Valida datos de usuario para inciio de sesión.
         """
         user = Usuario.query.filter_by(mail=data["mail"]).first()
 
@@ -56,9 +53,7 @@ class UserService:
         if not check_password_hash(user.hash_password, data["contrasenia"]):
             raise ValueError("Contraseña incorrecta")
 
-        # Carga la relación del rol para poder acceder al nombre
         db.session.refresh(user, ['rol'])
-        
         return user
 
     @staticmethod
@@ -73,3 +68,4 @@ class UserService:
 
         db.session.refresh(user, ['rol'])
         return user
+        

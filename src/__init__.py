@@ -32,10 +32,8 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 
-    # Configuración de CORS para permitir peticiones desde cualquier origen. Configuración lista para su uso a futuro. 
     CORS(app, resources={r"/*": {"origins": "*"}})
 
-    # Inicializar extensiones con la aplicación
     db.init_app(app)
     migrate.init_app(app, db)
 
@@ -88,12 +86,9 @@ def create_app():
         """
         return {"msg": "App running!"}, 200
 
-    # Swagger endpoint - JSON spec
+    # Swagger endpoint - JSON 
     @app.route("/swagger")
     def swagger_spec():
-        """
-        Genera la especificación Swagger/OpenAPI de la API en formato JSON
-        """
         swag = swagger(app)
         swag['info']['version'] = "1.0"
         swag['info']['title'] = "Vehicle Inspection Platform API"
@@ -102,7 +97,6 @@ def create_app():
         swag['basePath'] = "/"
         swag['schemes'] = ["http"]
         
-        # Configuración de seguridad JWT
         swag['securityDefinitions'] = {
             'Bearer': {
                 'type': 'apiKey',
@@ -114,7 +108,7 @@ def create_app():
         
         return jsonify(swag)
 
-    # Swagger UI - Interfaz visual
+    # Swagger UI 
     @app.route("/docs")
     def swagger_ui():
         """

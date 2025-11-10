@@ -3,7 +3,6 @@ from typing import Optional
 
 
 class VehicleRegisterRequest(BaseModel):
-    """Request para registrar un vehículo"""
     duenio_id: int
     matricula: str
     marca: str
@@ -19,7 +18,6 @@ class VehicleRegisterRequest(BaseModel):
 
 
 class VehicleUpdateRequest(BaseModel):
-    """Request para actualizar un vehículo - Todos los campos son opcionales para actualizaciones parciales"""
     marca: Optional[str] = None
     modelo: Optional[str] = None
     anio: Optional[int] = None
@@ -38,7 +36,6 @@ class VehicleUpdateRequest(BaseModel):
 
 
 class VehicleResponse(BaseModel):
-    """Response con datos de un vehículo"""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -50,7 +47,6 @@ class VehicleResponse(BaseModel):
 
 
 class VehicleDetailResponse(BaseModel):
-    """Response detallada con información del dueño"""
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -64,6 +60,5 @@ class VehicleDetailResponse(BaseModel):
 
 
 class VehicleListResponse(BaseModel):
-    """Response con lista de vehículos"""
     vehiculos: list[VehicleDetailResponse]
     total: int

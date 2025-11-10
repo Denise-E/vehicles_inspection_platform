@@ -8,13 +8,8 @@ from flask import request, jsonify
 
 def generate_token(user_id: int, user_email: str, user_role: str) -> str:
     """
-    Genera un JWT token para un usuario.
+    Genera un JWT token.
     
-    Args:
-        user_id: ID del usuario
-        user_email: Email del usuario
-        user_role: Rol del usuario (DUENIO, INSPECTOR, ADMIN)
-        
     Returns:
         Token JWT como string
     """
@@ -31,7 +26,6 @@ def generate_token(user_id: int, user_email: str, user_role: str) -> str:
         'iat': datetime.utcnow()  # Issued at
     }
     
-    # Generar token
     token = jwt.encode(payload, secret_key, algorithm='HS256')
     return token
 
@@ -40,9 +34,6 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """
     Verifica y decodifica un JWT token.
     
-    Args:
-        token: Token JWT a verificar
-        
     Returns:
         Payload decodificado si el token es válido, None en caso contrario
     """
@@ -74,7 +65,6 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
         
-        # Obtener token del header Authorization
         auth_header = request.headers.get('Authorization')
         
         if auth_header:
@@ -87,7 +77,6 @@ def token_required(f):
         if not token:
             return jsonify({"error": "Token no proporcionado. Se requiere autenticación"}), 401
         
-        # Verificar token
         payload = verify_token(token)
         
         if payload is None:

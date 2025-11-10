@@ -286,11 +286,6 @@ def detalle(turno_id: int):
     """
     return obtener_turno(turno_id)
 
-
-
-
-
-
 @bookings.route("", methods=['GET'])
 @token_required
 def listar_todos():

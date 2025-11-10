@@ -4,13 +4,11 @@ from datetime import datetime
 
 # Request schemas
 class InspectionCreateRequest(BaseModel):
-    """Schema para crear una inspección asociada a un turno"""
     turno_id: int
     inspector_id: int
 
 
 class ChequeoRequest(BaseModel):
-    """Schema para un chequeo individual"""
     item_numero: int = Field(..., ge=1, le=8, description="Número del item chequeado (1-8)")
     descripcion: str = Field(..., min_length=3, max_length=200, description="Descripción del chequeo")
     puntuacion: int = Field(..., ge=1, le=10, description="Puntuación del chequeo (1-10)")
@@ -31,7 +29,6 @@ class ChequeoRequest(BaseModel):
 
 
 class ChequeosListRequest(BaseModel):
-    """Schema para registrar la lista de 8 chequeos"""
     chequeos: list[ChequeoRequest] = Field(..., min_length=8, max_length=8)
     
     @field_validator('chequeos')
@@ -53,13 +50,11 @@ class ChequeosListRequest(BaseModel):
 
 
 class InspectionCloseRequest(BaseModel):
-    """Schema para cerrar una inspección (opcional: incluir observación)"""
     observacion: str | None = Field(None, min_length=10, max_length=500)
 
 
 # Response schemas
 class ChequeoResponse(BaseModel):
-    """Schema de respuesta para un chequeo"""
     model_config = ConfigDict(from_attributes=True)
     
     id: int
@@ -70,7 +65,6 @@ class ChequeoResponse(BaseModel):
 
 
 class InspectionResponse(BaseModel):
-    """Schema de respuesta para una inspección"""
     model_config = ConfigDict(from_attributes=True)
     
     id: int
@@ -85,7 +79,6 @@ class InspectionResponse(BaseModel):
 
 
 class InspectionDetailResponse(BaseModel):
-    """Schema de respuesta detallada para una inspección con sus chequeos"""
     model_config = ConfigDict(from_attributes=True)
     
     id: int
@@ -101,7 +94,6 @@ class InspectionDetailResponse(BaseModel):
 
 
 class InspectionListResponse(BaseModel):
-    """Schema de respuesta para listar inspecciones"""
     inspecciones: list[InspectionResponse]
     total: int
 

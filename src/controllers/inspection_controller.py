@@ -47,7 +47,6 @@ def register_chequeos(inspeccion_id: int) -> Tuple[dict, int]:
     try:
         data = ChequeosListRequest(**request.json)
         
-        # Extraer solo los datos necesarios de cada chequeo
         chequeos_data = [chequeo.model_dump() for chequeo in data.chequeos]
         
         inspection = InspectionService.register_chequeos(inspeccion_id, chequeos_data)
@@ -80,7 +79,6 @@ def close_inspection(inspeccion_id: int) -> Tuple[dict, int]:
         data = InspectionCloseRequest(**request.json)
         inspection = InspectionService.close_inspection(inspeccion_id, data.observacion)
         
-        # Preparar chequeos para respuesta
         chequeos_response = []
         for idx, chequeo in enumerate(inspection.chequeos, start=1):
             chequeos_response.append({
@@ -112,16 +110,12 @@ def close_inspection(inspeccion_id: int) -> Tuple[dict, int]:
 
 
 def get_inspection(inspeccion_id: int) -> Tuple[dict, int]:
-    """
-    Obtiene una inspección por su ID con todos sus chequeos.
-    """
     try:
         user_id = request.current_user['user_id']
         user_role = request.current_user['role']
         
         inspection = InspectionService.get_inspection_by_id(inspeccion_id, user_id=user_id, user_role=user_role)
         
-        # Preparar chequeos para respuesta
         chequeos_response = []
         for idx, chequeo in enumerate(inspection.chequeos, start=1):
             chequeos_response.append({
@@ -154,8 +148,6 @@ def get_inspection(inspeccion_id: int) -> Tuple[dict, int]:
 
 def list_inspections_by_vehiculo(matricula: str) -> Tuple[dict, int]:
     """
-    Lista todas las inspecciones de un vehículo por matrícula.
-    
     Validaciones de autorización:
     - ADMIN e INSPECTOR pueden ver inspecciones de cualquier vehículo
     - DUENIO solo puede ver inspecciones de sus propios vehículos
@@ -193,9 +185,7 @@ def list_inspections_by_vehiculo(matricula: str) -> Tuple[dict, int]:
 
 
 def list_inspections_by_inspector(inspector_id: int) -> Tuple[dict, int]:
-    """
-    Lista todas las inspecciones realizadas por un inspector.
-    
+    """    
     Validaciones de autorización:
     - ADMIN puede ver inspecciones de cualquier inspector
     - INSPECTOR solo puede ver sus propias inspecciones
@@ -233,9 +223,6 @@ def list_inspections_by_inspector(inspector_id: int) -> Tuple[dict, int]:
 
 
 def list_all_inspections() -> Tuple[dict, int]:
-    """
-    Lista todas las inspecciones del sistema.
-    """
     try:
         inspections = InspectionService.list_all_inspections()
         

@@ -25,7 +25,6 @@ class UserResponse(BaseModel):
 
 
 class UserLoginResponse(BaseModel):
-    """Response para login con token JWT"""
     id: int
     nombre_completo: str
     mail: EmailStr

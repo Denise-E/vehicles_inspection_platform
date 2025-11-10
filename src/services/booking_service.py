@@ -24,27 +24,19 @@ class BookingService:
         Args:
             fecha_inicio: Fecha desde la cual buscar (formato YYYY-MM-DD), por defecto hoy
             fecha_final: Fecha hasta la cual buscar (formato YYYY-MM-DD), opcional
-        
-        Returns:
-            dict con slots disponibles
         """
-        # Determinar fecha de inicio
         if fecha_inicio:
             inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d')
         else:
             inicio = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         
-        # Determinar fecha final
         if fecha_final:
             final = datetime.strptime(fecha_final, '%Y-%m-%d')
-            # Validar que fecha_final sea posterior a fecha_inicio
             if final < inicio:
                 raise ValueError("fecha_final debe ser posterior o igual a fecha_inicio")
         else:
-            # Por defecto, mostrar los próximos N días configurados
             final = inicio + timedelta(days=HORARIO_CONFIG["dias_anticipacion"])
         
-        # Generar slots disponibles
         slots = []
         fecha_actual = inicio
         
@@ -55,10 +47,8 @@ class BookingService:
                 for hora in range(HORARIO_CONFIG["hora_inicio"], HORARIO_CONFIG["hora_fin"]):
                     slot_datetime = fecha_actual.replace(hour=hora, minute=0, second=0, microsecond=0)
                     
-                    # Solo mostrar slots futuros
                     if slot_datetime > datetime.now():
                         # Verificar si hay algún turno confirmado o reservado en ese horario
-                        # (sin importar el vehículo - disponibilidad general del sistema)
                         turno_existente = Turno.query.filter(
                             Turno.fecha == slot_datetime,
                             Turno.estado_id.in_([1, 2])  # RESERVADO=1 o CONFIRMADO=2
@@ -79,21 +69,13 @@ class BookingService:
     @staticmethod
     def create_booking(data: dict, user_role: str = None) -> Turno:
         """
-        Crea un nuevo turno (estado RESERVADO).
+        Crea un nuevo turno.
         
-        Args:
-            data: dict con matricula, fecha, creado_por
-            user_role: Rol del usuario
-            
-        Returns:
-            Turno creado
         """
-        # Verificar que el vehículo existe
         vehiculo = Vehiculo.query.filter_by(matricula=data["matricula"]).first()
         if not vehiculo:
             raise ValueError(f"Vehículo con matrícula {data['matricula']} no encontrado")
         
-        # Verificar que el usuario existe
         usuario = Usuario.query.filter_by(id=data["creado_por"]).first()
         if not usuario:
             raise ValueError(f"Usuario con ID {data['creado_por']} no encontrado")
@@ -105,10 +87,8 @@ class BookingService:
             if vehiculo.estado.nombre != 'ACTIVO':
                 raise ValueError(f"No puedes crear turnos para un vehículo en estado {vehiculo.estado.nombre}. El vehículo debe estar ACTIVO")
         
-        # Parsear fecha
         fecha_turno = datetime.strptime(data["fecha"], '%Y-%m-%d %H:%M')
         
-        # Validar que la fecha sea futura
         if fecha_turno <= datetime.now():
             raise ValueError("La fecha del turno debe ser futura")
         
@@ -129,12 +109,10 @@ class BookingService:
         if turno_existente:
             raise ValueError("Ya existe un turno para este vehículo en esa fecha y hora")
         
-        # Obtener estado RESERVADO (id=1)
         estado_reservado = EstadoTurno.query.filter_by(nombre="RESERVADO").first()
         if not estado_reservado:
             raise ValueError("Estado RESERVADO no encontrado en la base de datos")
         
-        # Crear turno
         nuevo_turno = Turno(
             vehiculo_id=vehiculo.id,
             fecha=fecha_turno,
@@ -163,27 +141,15 @@ class BookingService:
         - CONFIRMADO (2) → COMPLETADO (3) o CANCELADO (4)
         - COMPLETADO (3) → No permite cambios
         - CANCELADO (4) → No permite cambios
-        
-        Args:
-            turno_id: ID del turno
-            nuevo_estado_id: ID del nuevo estado (1-RESERVADO, 2-CONFIRMADO, 3-COMPLETADO, 4-CANCELADO)
-            user_id: ID del usuario que intenta actualizar
-            user_role: Rol del usuario (ADMIN, DUENIO, etc.)
-            
-        Returns:
-            Turno actualizado
         """
         turno = Turno.query.filter_by(id=turno_id).first()
         if not turno:
             raise ValueError(f"Turno con ID {turno_id} no encontrado")
         
-        # VALIDACIÓN DE AUTORIZACIÓN POR ROL
         if user_role != 'ADMIN':
-            # Si NO es admin, verificar que el vehículo del turno pertenece al usuario
             if turno.vehiculo.duenio_id != user_id:
                 raise ValueError("No tienes permiso para modificar este turno. Solo puedes modificar turnos de tus propios vehículos")
         
-        # Obtener el nuevo estado
         nuevo_estado = EstadoTurno.query.filter_by(id=nuevo_estado_id).first()
         if not nuevo_estado:
             raise ValueError(f"Estado con ID {nuevo_estado_id} no encontrado")
@@ -191,7 +157,6 @@ class BookingService:
         estado_actual = turno.estado.nombre
         estado_nuevo = nuevo_estado.nombre
         
-        # Validar transiciones de estado permitidas
         transiciones_validas = {
             "RESERVADO": ["CONFIRMADO", "CANCELADO"],
             "CONFIRMADO": ["COMPLETADO", "CANCELADO"],
@@ -205,7 +170,6 @@ class BookingService:
                 f"Transiciones permitidas desde {estado_actual}: {', '.join(transiciones_validas.get(estado_actual, [])) or 'ninguna'}"
             )
         
-        # Actualizar el estado
         turno.estado_id = nuevo_estado_id
         db.session.commit()
         db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
@@ -220,14 +184,6 @@ class BookingService:
         Reglas de autorización:
         - ADMIN puede ver cualquier turno
         - Usuarios normales solo pueden ver turnos de sus propios vehículos
-        
-        Args:
-            turno_id: ID del turno
-            user_id: ID del usuario que consulta
-            user_role: Rol del usuario
-            
-        Returns:
-            Turno encontrado
         """
         turno = Turno.query.filter_by(id=turno_id).first()
         if not turno:
@@ -244,21 +200,14 @@ class BookingService:
     def list_bookings_by_user(user_id: int) -> list[Turno]:
         """
         Lista todos los turnos creados por un usuario.
-        
-        Args:
-            user_id: ID del usuario
-            
-        Returns:
-            Lista de turnos
         """
-        # Verificar que el usuario existe
         usuario = Usuario.query.filter_by(id=user_id).first()
         if not usuario:
             raise ValueError(f"Usuario con ID {user_id} no encontrado")
         
         turnos = Turno.query.filter_by(creado_por=user_id).order_by(Turno.fecha.desc()).all()
         
-        # Cargar relaciones
+        # Carga relaciones
         for turno in turnos:
             db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
         
@@ -268,12 +217,6 @@ class BookingService:
     def list_bookings_by_vehicle(matricula: str) -> list[Turno]:
         """
         Lista todos los turnos de un vehículo.
-        
-        Args:
-            matricula: Matrícula del vehículo
-            
-        Returns:
-            Lista de turnos
         """
         vehiculo = Vehiculo.query.filter_by(matricula=matricula).first()
         if not vehiculo:
@@ -281,7 +224,7 @@ class BookingService:
         
         turnos = Turno.query.filter_by(vehiculo_id=vehiculo.id).order_by(Turno.fecha.desc()).all()
         
-        # Cargar relaciones
+        # Carga relaciones
         for turno in turnos:
             db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
         
@@ -291,15 +234,10 @@ class BookingService:
     def list_all_bookings() -> list[Turno]:
         """
         Lista todos los turnos del sistema.
-        
-        Returns:
-            Lista de turnos
         """
         turnos = Turno.query.order_by(Turno.fecha.desc()).all()
         
-        # Cargar relaciones
         for turno in turnos:
             db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
         
         return turnos
-

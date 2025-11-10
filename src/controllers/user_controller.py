@@ -7,10 +7,7 @@ from pydantic import ValidationError
 
 def register_user():
     try:
-        # Valida request body con Pydantic
         data = UserRegisterRequest(**request.json)
-
-        # Crea usuario en la base de datos
         user = UserService.create_user(data.model_dump())
 
         response_data = {
@@ -22,10 +19,8 @@ def register_user():
             "activo": user.activo
         }
         
-        # Valida response body con Pydantic
         response = UserResponse(**response_data)
         return jsonify(response.model_dump()), 201
-
     except ValidationError:
         raise
     except Exception as e:
@@ -34,12 +29,9 @@ def register_user():
 
 def login_user():
     try:
-        # Valida request body con Pydantic
         data = UserLoginRequest(**request.json)
-        
         user = UserService.login_user(data.model_dump())
         
-        # Generar token JWT
         token = generate_token(user.id, user.mail, user.rol.nombre)
         
         response_data = {
@@ -52,10 +44,8 @@ def login_user():
             "token": token
         }
         
-        # Valida response body con Pydantic (ahora incluye token)
         response = UserLoginResponse(**response_data)
         return jsonify(response.model_dump()), 200
-        
     except ValidationError:
         raise
     except Exception as e:
@@ -75,7 +65,6 @@ def get_user_profile(user_id):
             "activo": user.activo
         }
         
-        # Valida response body con Pydantic
         response = UserResponse(**response_data)
         return jsonify(response.model_dump()), 200
     except ValidationError:
