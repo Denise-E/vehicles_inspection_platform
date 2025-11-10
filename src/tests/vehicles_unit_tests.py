@@ -91,7 +91,7 @@ def get_auth_token(client, app, mail="test_vehicle@example.com", password="passw
 
 
 # ========================================
-# TESTS PARA /api/vehicles/register/{duenio_id}
+# TESTS PARA /api/vehicles (POST)
 # ========================================
 
 def test_register_vehicle_success(client, app):
@@ -117,13 +117,14 @@ def test_register_vehicle_success(client, app):
         
         # Registrar vehículo
         data = {
+            "duenio_id": user_id,
             "matricula": "ABC123",
             "marca": "Toyota",
             "modelo": "Corolla",
             "anio": 2020
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
+        response = client.post('/api/vehicles', json=data, headers=headers)
         
         assert response.status_code == 201
         response_data = response.get_json()
@@ -171,13 +172,14 @@ def test_register_vehicle_duplicate_matricula(client, app):
         
         # Intentar registrar vehículo con la misma matrícula
         data = {
+            "duenio_id": user_id,
             "matricula": "XYZ789",
             "marca": "Chevrolet",
             "modelo": "Cruze",
             "anio": 2021
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
+        response = client.post('/api/vehicles', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -208,13 +210,14 @@ def test_register_vehicle_user_with_admin_role(client, app):
         
         # Intentar registrar vehículo con usuario ADMIN
         data = {
+            "duenio_id": user_id,
             "matricula": "ADM999",
             "marca": "BMW",
             "modelo": "X5",
             "anio": 2022
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
+        response = client.post('/api/vehicles', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -245,13 +248,14 @@ def test_register_vehicle_user_with_inspector_role(client, app):
         
         # Intentar registrar vehículo con usuario INSPECTOR
         data = {
+            "duenio_id": user_id,
             "matricula": "INS888",
             "marca": "Mercedes",
             "modelo": "C-Class",
             "anio": 2021
         }
         
-        response = client.post(f'/api/vehicles/register/{user_id}', json=data, headers=headers)
+        response = client.post('/api/vehicles', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -264,13 +268,14 @@ def test_register_vehicle_without_token(client, app):
     with app.app_context():
         # Intentar registrar sin token
         data = {
+            "duenio_id": 1,
             "matricula": "NO_TOKEN",
             "marca": "Test",
             "modelo": "Test",
             "anio": 2020
         }
         
-        response = client.post('/api/vehicles/register/1', json=data)
+        response = client.post('/api/vehicles', json=data)
         
         assert response.status_code == 401
         response_data = response.get_json()
@@ -518,11 +523,11 @@ def test_update_vehicle_invalid_year(client, app):
 
 
 # ========================================
-# TESTS PARA /api/vehicles/{matricula}/desactivar (PATCH - Soft delete)
+# TESTS PARA /api/vehicles/{matricula} (DELETE - Soft delete)
 # ========================================
 
 def test_delete_vehicle_success(client, app):
-    """Test: Desactivar vehículo exitosamente (soft delete con PATCH y JWT)"""
+    """Test: Desactivar vehículo exitosamente (soft delete con DELETE y JWT)"""
     with app.app_context():
         # Crear usuario y vehículo
         rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
@@ -553,8 +558,8 @@ def test_delete_vehicle_success(client, app):
         db.session.add(vehicle)
         db.session.commit()
         
-        # Desactivar vehículo con PATCH
-        response = client.patch('/api/vehicles/DEL789/desactivar', headers=headers)
+        # Desactivar vehículo con DELETE
+        response = client.delete('/api/vehicles/DEL789', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -569,7 +574,7 @@ def test_delete_vehicle_not_found(client, app):
         token = get_auth_token(client, app)
         headers = {'Authorization': f'Bearer {token}'}
         
-        response = client.patch('/api/vehicles/NOEXISTE/desactivar', headers=headers)
+        response = client.delete('/api/vehicles/NOEXISTE', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -608,8 +613,8 @@ def test_delete_vehicle_already_inactive(client, app):
         db.session.add(vehicle)
         db.session.commit()
         
-        # Intentar desactivar vehículo ya inactivo con PATCH
-        response = client.patch('/api/vehicles/INA999/desactivar', headers=headers)
+        # Intentar desactivar vehículo ya inactivo con DELETE
+        response = client.delete('/api/vehicles/INA999', headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
