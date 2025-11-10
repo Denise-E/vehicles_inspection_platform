@@ -134,7 +134,7 @@ def setup_data(app):
 
 
 # ========================================
-# TESTS PARA /api/bookings/disponibilidad
+# TESTS PARA /api/bookings/availability
 # ========================================
 
 def test_consultar_disponibilidad_success(client, app, setup_data):
@@ -155,7 +155,7 @@ def test_consultar_disponibilidad_success(client, app, setup_data):
             "fecha_inicio": next_monday.strftime('%Y-%m-%d')
         }
         
-        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
+        response = client.post('/api/bookings/availability', json=data, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -184,7 +184,7 @@ def test_consultar_disponibilidad_con_rango_fechas(client, app):
             "fecha_final": fecha_final.strftime('%Y-%m-%d')
         }
         
-        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
+        response = client.post('/api/bookings/availability', json=data, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -204,7 +204,7 @@ def test_consultar_disponibilidad_formato_fecha_invalido(client, app, setup_data
             "fecha_inicio": "25/10/2025"  # Formato incorrecto
         }
         
-        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
+        response = client.post('/api/bookings/availability', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -223,7 +223,7 @@ def test_consultar_disponibilidad_rango_invalido(client, app):
             "fecha_final": "2025-10-25"  # Anterior a fecha_inicio
         }
         
-        response = client.post('/api/bookings/disponibilidad', json=data, headers=headers)
+        response = client.post('/api/bookings/availability', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -238,7 +238,7 @@ def test_consultar_disponibilidad_sin_body(client, app):
         headers = {'Authorization': f'Bearer {token}'}
         
         # Sin body - debe usar valores por defecto
-        response = client.post('/api/bookings/disponibilidad', json={}, headers=headers)
+        response = client.post('/api/bookings/availability', json={}, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -253,8 +253,8 @@ def test_consultar_disponibilidad_sin_body(client, app):
 def test_reservar_turno_success(client, app, setup_data):
     """Test: Reservar turno exitosamente con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Calcular fecha futura (próximo lunes a las 10:00)
@@ -283,8 +283,8 @@ def test_reservar_turno_success(client, app, setup_data):
 def test_reservar_turno_fecha_pasada(client, app, setup_data):
     """Test: Reservar turno falla con fecha pasada con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Fecha del pasado
@@ -306,8 +306,8 @@ def test_reservar_turno_fecha_pasada(client, app, setup_data):
 def test_reservar_turno_dia_no_laborable(client, app, setup_data):
     """Test: Reservar turno falla en sábado con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Calcular próximo sábado
@@ -361,8 +361,8 @@ def test_reservar_turno_horario_invalido(client, app, setup_data):
 def test_reservar_turno_duplicado(client, app, setup_data):
     """Test: Reservar turno falla si ya existe uno en la misma fecha con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear un turno previo
@@ -481,8 +481,8 @@ def test_reservar_turno_vehiculo_no_propio(client, app):
 def test_reservar_turno_vehiculo_inactivo(client, app, setup_data):
     """Test: Usuario normal no puede crear turno para vehículo inactivo con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Cambiar el estado del vehículo a INACTIVO
@@ -546,8 +546,8 @@ def test_reservar_turno_admin_cualquier_vehiculo(client, app, setup_data):
 def test_actualizar_estado_reservado_a_confirmado(client, app, setup_data):
     """Test: Actualizar estado de RESERVADO a CONFIRMADO exitosamente con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear un turno en estado RESERVADO
@@ -584,8 +584,8 @@ def test_actualizar_estado_reservado_a_confirmado(client, app, setup_data):
 def test_actualizar_estado_reservado_a_cancelado(client, app, setup_data):
     """Test: Actualizar estado de RESERVADO a CANCELADO exitosamente con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear un turno en estado RESERVADO
@@ -622,8 +622,8 @@ def test_actualizar_estado_reservado_a_cancelado(client, app, setup_data):
 def test_actualizar_estado_confirmado_a_completado(client, app, setup_data):
     """Test: Actualizar estado de CONFIRMADO a COMPLETADO exitosamente con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear un turno en estado CONFIRMADO
@@ -660,8 +660,8 @@ def test_actualizar_estado_confirmado_a_completado(client, app, setup_data):
 def test_actualizar_estado_transicion_invalida(client, app, setup_data):
     """Test: Falla al intentar transición de estado inválida con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear un turno en estado COMPLETADO (estado final)
@@ -891,8 +891,8 @@ def test_actualizar_estado_admin_puede_modificar_cualquier_turno(client, app):
 def test_obtener_turno_success(client, app, setup_data):
     """Test: Obtener turno por ID exitosamente con JWT"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Obtener token del usuario dueño del vehículo
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear un turno
@@ -1075,14 +1075,14 @@ def test_obtener_turno_admin_puede_ver_cualquiera(client, app):
 
 
 # ========================================
-# TESTS PARA GET /api/bookings/usuario
+# TESTS PARA GET /api/users/bookings
 # ========================================
 
 def test_listar_mis_turnos_success(client, app, setup_data):
     """Test: Listar mis turnos (del usuario autenticado) exitosamente con JWT"""
     with app.app_context():
-        # Obtener token del usuario autenticado
-        token = get_auth_token(client, app)
+        # Obtener token del usuario autenticado (dueño del vehículo)
+        token = get_auth_token(client, app, mail="juan@example.com", password="password123")
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear turnos para el usuario autenticado
@@ -1111,7 +1111,7 @@ def test_listar_mis_turnos_success(client, app, setup_data):
         db.session.commit()
         
         # Listar mis turnos (user_id obtenido del token automáticamente)
-        response = client.get('/api/bookings/usuario', headers=headers)
+        response = client.get('/api/users/bookings', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -1120,7 +1120,7 @@ def test_listar_mis_turnos_success(client, app, setup_data):
 
 
 # ========================================
-# TESTS PARA /api/bookings/vehiculo/{matricula}
+# TESTS PARA /api/vehicles/{matricula}/bookings
 # ========================================
 
 def test_listar_turnos_por_vehiculo_success(client, app, setup_data):
@@ -1150,7 +1150,7 @@ def test_listar_turnos_por_vehiculo_success(client, app, setup_data):
         db.session.commit()
         
         # Listar turnos
-        response = client.get(f'/api/bookings/vehiculo/{setup_data["matricula"]}', headers=headers)
+        response = client.get(f'/api/vehicles/{setup_data["matricula"]}/bookings', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -1166,7 +1166,7 @@ def test_disponibilidad_without_token(client, app, setup_data):
     """Test: Consultar disponibilidad falla sin token JWT"""
     with app.app_context():
         data = {}
-        response = client.post('/api/bookings/disponibilidad', json=data)
+        response = client.post('/api/bookings/availability', json=data)
         
         assert response.status_code == 401
         response_data = response.get_json()
@@ -1207,7 +1207,7 @@ def test_obtener_turno_without_token(client, app):
 def test_listar_mis_turnos_without_token(client, app):
     """Test: Listar mis turnos falla sin token JWT"""
     with app.app_context():
-        response = client.get('/api/bookings/usuario')
+        response = client.get('/api/users/bookings')
         
         assert response.status_code == 401
         response_data = response.get_json()
@@ -1217,7 +1217,7 @@ def test_listar_mis_turnos_without_token(client, app):
 def test_listar_por_vehiculo_without_token(client, app):
     """Test: Listar turnos por vehículo falla sin token JWT"""
     with app.app_context():
-        response = client.get('/api/bookings/vehiculo/ABC123')
+        response = client.get('/api/vehicles/ABC123/bookings')
         
         assert response.status_code == 401
         response_data = response.get_json()
