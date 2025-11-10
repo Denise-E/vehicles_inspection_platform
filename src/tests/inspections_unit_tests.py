@@ -329,7 +329,7 @@ def test_close_inspection_resultado_seguro(client, app, setup_data):
         client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
         
         # Cerrar inspección (sin observación, ya que es SEGURO)
-        response = client.post(f'/api/inspections/{inspeccion_id}/cerrar', json={}, headers=headers)
+        response = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -367,12 +367,12 @@ def test_close_inspection_resultado_rechequear_por_total_bajo(client, app, setup
         client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
         
         # Intentar cerrar SIN observación (debe fallar)
-        response_sin_obs = client.post(f'/api/inspections/{inspeccion_id}/cerrar', json={}, headers=headers)
+        response_sin_obs = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
         assert response_sin_obs.status_code == 400
         
         # Cerrar CON observación
         data_close = {"observacion": "Problemas graves detectados en frenos y emisiones que requieren reparación inmediata"}
-        response = client.post(f'/api/inspections/{inspeccion_id}/cerrar', json=data_close, headers=headers)
+        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -412,7 +412,7 @@ def test_close_inspection_resultado_rechequear_por_item_bajo(client, app, setup_
         
         # Cerrar CON observación
         data_close = {"observacion": "Frenos delanteros insuficientes, requiere reemplazo"}
-        response = client.post(f'/api/inspections/{inspeccion_id}/cerrar', json=data_close, headers=headers)
+        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -477,7 +477,7 @@ def test_close_inspection_caso_borde_80_puntos(client, app, setup_data):
         
         # Cerrar CON observación
         data_close = {"observacion": "Puntuación límite, requiere revisión adicional"}
-        response = client.post(f'/api/inspections/{inspeccion_id}/cerrar', json=data_close, headers=headers)
+        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -519,7 +519,7 @@ def test_close_inspection_caso_borde_40_puntos(client, app, setup_data):
         
         # Cerrar CON observación
         data_close = {"observacion": "Puntuación mínima aceptable, requiere monitoreo"}
-        response = client.post(f'/api/inspections/{inspeccion_id}/cerrar', json=data_close, headers=headers)
+        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -573,7 +573,7 @@ def test_list_inspections_by_vehiculo(client, app, setup_data):
         client.post('/api/inspections', json=data_inspeccion, headers=headers)
         
         # Listar inspecciones del vehículo
-        response = client.get(f'/api/inspections/vehiculo/{setup_data["matricula"]}', headers=headers)
+        response = client.get(f'/api/vehicles/{setup_data["matricula"]}/inspections', headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
@@ -608,7 +608,7 @@ def test_close_inspection_without_inspector_role(client, app, setup_data):
         token = get_auth_token(client, app, "duenio_test@example.com", "password123", "DUENIO")
         headers = {'Authorization': f'Bearer {token}'}
         
-        response = client.post('/api/inspections/1/cerrar', json={}, headers=headers)
+        response = client.patch('/api/inspections/1', json={}, headers=headers)
         
         assert response.status_code == 403
         response_data = response.get_json()
