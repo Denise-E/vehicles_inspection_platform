@@ -41,7 +41,10 @@ def register_vehicle() -> Tuple[dict, int]:
 
 def get_vehicle_profile(matricula: str) -> Tuple[dict, int]:
     try:
-        vehicle = VehicleService.get_vehicle_by_matricula(matricula)
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        vehicle = VehicleService.get_vehicle_by_matricula(matricula, user_id=user_id, user_role=user_role)
         
         response_data = {
             "id": vehicle.id,
@@ -64,7 +67,10 @@ def get_vehicle_profile(matricula: str) -> Tuple[dict, int]:
 
 def list_all_vehicles() -> Tuple[dict, int]:
     try:
-        vehicles = VehicleService.list_all_vehicles()
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        vehicles = VehicleService.list_all_vehicles(user_id=user_id, user_role=user_role)
         
         vehicles_data = []
         for vehicle in vehicles:

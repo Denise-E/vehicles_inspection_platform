@@ -290,7 +290,7 @@ def detalle(turno_id: int):
 @token_required
 def listar_todos():
     """
-    Listar todos los turnos del sistema
+    Listar turnos del sistema
     ---
     tags:
       - Turnos
@@ -298,7 +298,7 @@ def listar_todos():
       - Bearer: []
     responses:
       200:
-        description: Lista de todos los turnos del sistema (para administradores)
+        description: Lista de turnos según permisos del usuario
         schema:
           type: object
           properties:

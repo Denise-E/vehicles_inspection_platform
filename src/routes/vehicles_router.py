@@ -129,7 +129,7 @@ def profile(matricula: str):
             nombre_duenio:
               type: string
       400:
-        description: Vehículo no encontrado
+        description: Vehículo no encontrado o sin permisos
         schema:
           type: object
           properties:
@@ -150,7 +150,7 @@ def profile(matricula: str):
 @token_required
 def listar():
     """
-    Listar todos los vehículos
+    Listar vehículos del sistema
     ---
     tags:
       - Vehículos
@@ -158,7 +158,7 @@ def listar():
       - Bearer: []
     responses:
       200:
-        description: Lista de todos los vehículos del sistema
+        description: Lista de vehículos según permisos del usuario
         schema:
           type: object
           properties:
@@ -371,7 +371,7 @@ def vehicle_bookings(matricula: str):
             total:
               type: integer
       400:
-        description: Vehículo no encontrado
+        description: Vehículo no encontrado o sin permisos
         schema:
           type: object
           properties:

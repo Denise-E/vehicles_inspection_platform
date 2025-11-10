@@ -34,23 +34,34 @@ class VehicleService:
         return vehicle
 
     @staticmethod
-    def get_vehicle_by_matricula(matricula: str) -> Vehiculo:
+    def get_vehicle_by_matricula(matricula: str, user_id: int = None, user_role: str = None) -> Vehiculo:
         """
         Obtiene un vehículo por su matrícula.
+        - ADMIN e INSPECTOR: pueden ver cualquier vehículo
+        - DUENIO: solo puede ver sus propios vehículos
         """
         vehicle = Vehiculo.query.filter_by(matricula=matricula).first()
         if not vehicle:
             raise ValueError(f"Vehículo con matrícula {matricula} no encontrado")
         
+        if user_role and user_role not in ["ADMIN", "INSPECTOR"]:
+            if vehicle.duenio_id != user_id:
+                raise ValueError("No tiene permisos para ver este vehículo")
+        
         db.session.refresh(vehicle, ['estado', 'duenio'])
         return vehicle
 
     @staticmethod
-    def list_all_vehicles() -> list[Vehiculo]:
+    def list_all_vehicles(user_id: int = None, user_role: str = None) -> list[Vehiculo]:
         """
-        Lista todos los vehículos del sistema.
+        Lista vehículos del sistema.
+        - ADMIN: ve todos los vehículos
+        - DUENIO: solo ve sus propios vehículos
         """
-        vehicles = Vehiculo.query.all()
+        if user_role == "ADMIN" or user_role == "INSPECTOR":
+            vehicles = Vehiculo.query.all()
+        else:
+            vehicles = Vehiculo.query.filter_by(duenio_id=user_id).all()
         
         for vehicle in vehicles:
             db.session.refresh(vehicle, ['estado', 'duenio'])

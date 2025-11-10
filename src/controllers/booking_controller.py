@@ -160,7 +160,10 @@ def listar_turnos_por_usuario() -> Tuple[dict, int]:
 
 def listar_turnos_por_vehiculo(matricula: str) -> Tuple[dict, int]:
     try:
-        turnos = BookingService.list_bookings_by_vehicle(matricula)
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        turnos = BookingService.list_bookings_by_vehicle(matricula, user_id=user_id, user_role=user_role)
         
         turnos_data = []
         for turno in turnos:
@@ -189,7 +192,10 @@ def listar_turnos_por_vehiculo(matricula: str) -> Tuple[dict, int]:
 
 def listar_todos_los_turnos() -> Tuple[dict, int]:
     try:
-        turnos = BookingService.list_all_bookings()
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        turnos = BookingService.list_all_bookings(user_id=user_id, user_role=user_role)
         
         turnos_data = []
         for turno in turnos:

@@ -214,13 +214,19 @@ class BookingService:
         return turnos
 
     @staticmethod
-    def list_bookings_by_vehicle(matricula: str) -> list[Turno]:
+    def list_bookings_by_vehicle(matricula: str, user_id: int = None, user_role: str = None) -> list[Turno]:
         """
         Lista todos los turnos de un vehículo.
+        - ADMIN e INSPECTOR: pueden ver turnos de cualquier vehículo
+        - DUENIO: solo puede ver turnos de sus propios vehículos
         """
         vehiculo = Vehiculo.query.filter_by(matricula=matricula).first()
         if not vehiculo:
             raise ValueError(f"Vehículo con matrícula {matricula} no encontrado")
+        
+        if user_role and user_role not in ["ADMIN", "INSPECTOR"]:
+            if vehiculo.duenio_id != user_id:
+                raise ValueError("No tiene permisos para ver los turnos de este vehículo")
         
         turnos = Turno.query.filter_by(vehiculo_id=vehiculo.id).order_by(Turno.fecha.desc()).all()
         
@@ -231,11 +237,20 @@ class BookingService:
         return turnos
 
     @staticmethod
-    def list_all_bookings() -> list[Turno]:
+    def list_all_bookings(user_id: int = None, user_role: str = None) -> list[Turno]:
         """
-        Lista todos los turnos del sistema.
+        Lista turnos del sistema.
+        - ADMIN: ve todos los turnos
+        - DUENIO: solo ve turnos de sus propios vehículos
         """
-        turnos = Turno.query.order_by(Turno.fecha.desc()).all()
+        if user_role == "ADMIN":
+            turnos = Turno.query.order_by(Turno.fecha.desc()).all()
+        else:
+            turnos = (Turno.query
+                     .join(Vehiculo)
+                     .filter(Vehiculo.duenio_id == user_id)
+                     .order_by(Turno.fecha.desc())
+                     .all())
         
         for turno in turnos:
             db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
