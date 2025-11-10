@@ -421,7 +421,7 @@ def test_close_inspection_resultado_rechequear_por_item_bajo(client, app, setup_
 
 
 def test_close_inspection_caso_borde_80_puntos(client, app, setup_data):
-    """Test: Caso borde - exactamente 80 puntos pero con un item < 5 → RECHEQUEAR"""
+    """Test: Caso borde - exactamente 80 puntos con todos los items >= 5 → SEGURO"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
@@ -434,31 +434,7 @@ def test_close_inspection_caso_borde_80_puntos(client, app, setup_data):
         response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
         inspeccion_id = response_inspeccion.get_json()['id']
         
-        # Total = 80 pero un item = 4 < 5
-        data_chequeos = {
-            "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 4},  # < 5!
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 10},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 10},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 10},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 10},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 10},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 16}  # Ajustado para total 80
-            ]
-        }
-        # Nota: El total sería 80, pero debido al item < 5, debe ser RECHEQUEAR
-        # Ajustando para que sume 80: 4+10+10+10+10+10+10+16=80
-        # Pero puntuacion máxima es 10, así que usamos: 4+10+10+10+10+10+10+10=74
-        # Mejor ejemplo: 4+10+10+10+10+10+10+10=74, no suma 80
-        # Cambio a: 4+10+10+10+10+10+10+10 = 74, entonces no es exactamente 80
-        # Mejor caso: suma=80, item=4
-        # 4 + 11*10 = imposible porque max es 10
-        # Entonces: 4+10+10+10+10+10+10+10 = 74 (no 80)
-        # Para que sume 80 con un 4: 4 + x*7 = 80 → x*7=76 → x≈10.86 (imposible)
-        # Cambio el test: total=80, todos>=5 → SEGURO
-        
-        # Mejor caso: exactamente 80 pero NO cumple > 80
+        # Total = 80 (puntuación perfecta) con todos los items >= 5
         data_chequeos = {
             "chequeos": [
                 {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 10},
@@ -471,20 +447,60 @@ def test_close_inspection_caso_borde_80_puntos(client, app, setup_data):
                 {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 10}
             ]
         }
-        # Total = 80, pero la regla dice > 80, no >= 80
+        
+        client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        
+        # Cerrar sin observación (ya que debería ser SEGURO)
+        response = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
+        
+        assert response.status_code == 200
+        response_data = response.get_json()
+        assert response_data['puntuacion_total'] == 80
+        # Regla: >= 80 Y todos >= 5 → SEGURO
+        assert response_data['resultado'] == 'SEGURO'
+
+
+def test_close_inspection_80_puntos_con_item_bajo(client, app, setup_data):
+    """Test: 80 puntos pero con un item < 5 → RECHEQUEAR (falla condición de todos >= 5)"""
+    with app.app_context():
+        token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Crear inspección
+        data_inspeccion = {
+            "turno_id": setup_data["turno_id"],
+            "inspector_id": setup_data["inspector_id"]
+        }
+        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
+        inspeccion_id = response_inspeccion.get_json()['id']
+        
+        # Nota: Es matemáticamente imposible llegar a exactamente 80 puntos con un item < 5
+        # porque 7 items * 10 puntos = 70, más 1 item < 5 = máximo 74 puntos
+        # Pero podemos usar valores intermedios para ilustrar el caso
+        # Ejemplo: total alto pero un item < 5
+        data_chequeos = {
+            "chequeos": [
+                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 4},  # < 5!
+                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 10},
+                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 10},
+                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 10},
+                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10},
+                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 10},
+                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 10},
+                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 10}
+            ]
+        }
+        # Total = 74 (no 80), pero ilustra que incluso con total alto, un item < 5 → RECHEQUEAR
         
         client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
         
         # Cerrar CON observación
-        data_close = {"observacion": "Puntuación límite, requiere revisión adicional"}
+        data_close = {"observacion": "Los frenos no cumplen con el estándar mínimo requerido"}
         response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
         
         assert response.status_code == 200
         response_data = response.get_json()
-        # Total = 80, no es > 80, entonces debería ser RECHEQUEAR
-        assert response_data['puntuacion_total'] == 80
-        # Según la lógica: >80 y todos>=5 → SEGURO; sino → RECHEQUEAR
-        # Como NO es >80 (es =80), debería ser RECHEQUEAR
+        assert response_data['puntuacion_total'] == 74
         assert response_data['resultado'] == 'RECHEQUEAR'
 
 

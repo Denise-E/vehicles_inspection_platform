@@ -122,9 +122,9 @@ class InspectionService:
         Cierra una inspección, calcula el resultado y actualiza el estado del vehículo.
         
         REGLAS DE NEGOCIO:
-        - SEGURO: suma > 80 Y ningún chequeo < 5
-        - RECHEQUEAR: suma < 40 O algún chequeo < 5
-        - Si RECHEQUEAR, observación es OBLIGATORIA
+        - SEGURO: suma >= 80 Y ningún chequeo < 5
+        - RECHEQUEAR: suma < 40 O algún chequeo < 5 (observación OBLIGATORIA)
+        - Rango intermedio (40-79): también RECHEQUEAR (observación OBLIGATORIA)
         
         Validaciones:
         - La inspección debe existir
@@ -152,7 +152,7 @@ class InspectionService:
         minimo_chequeo = min(puntuaciones)
         
         # Determinar resultado según reglas de negocio
-        if puntuacion_total > 80 and minimo_chequeo >= 5:
+        if puntuacion_total >= 80 and minimo_chequeo >= 5:
             resultado_nombre = "SEGURO"
             estado_vehiculo_nombre = "ACTIVO"
         elif puntuacion_total < 40 or minimo_chequeo < 5:
