@@ -40,23 +40,20 @@ class InspectionService:
         if not turno:
             raise ValueError(f"Turno con ID {turno_id} no encontrado")
         
-        # Verificar que el turno está CONFIRMADO
         estado_confirmado = EstadoTurno.query.filter_by(nombre='CONFIRMADO').first()
-        if turno.estado_id != estado_confirmado.id:
-            raise ValueError("Solo se pueden crear inspecciones para turnos confirmados")
+        estado_completado = EstadoTurno.query.filter_by(nombre='COMPLETADO').first()
         
-        # Verificar que el turno no tiene ya una inspección
-        existing_inspection = Inspeccion.query.filter_by(turno_id=turno_id).first()
-        if existing_inspection:
-            raise ValueError(f"El turno {turno_id} ya tiene una inspección asociada")
+        if turno.estado_id == estado_completado.id:
+            raise ValueError("El turno ya fue completado")
+        elif turno.estado_id != estado_confirmado.id:
+            raise ValueError("No se puede llevar adelante esta inspección. Validar turno.")
         
         # Validar que la inspección se realiza el día programado del turno
         fecha_actual = datetime.utcnow().date()
         fecha_turno = turno.fecha.date() if isinstance(turno.fecha, datetime) else turno.fecha
         if fecha_actual != fecha_turno:
             raise ValueError(
-                f"La inspección solo puede realizarse el día programado del turno. "
-                f"Fecha del turno: {fecha_turno}, Fecha actual: {fecha_actual}"
+                "La inspección solo puede realizarse el día programado del turno. "
             )
         
         # Verificar que el inspector existe y tiene rol INSPECTOR
