@@ -170,25 +170,27 @@ def setup_data(app):
 # TESTS PARA /api/inspections (POST - Crear inspección)
 # ========================================
 
-def test_create_inspection_success(client, app, setup_data):
-    """Test: Crear inspección completa con 8 chequeos exitosamente con rol INSPECTOR"""
+def test_create_inspection_resultado_seguro(client, app, setup_data):
+    """Test: Crear inspección con resultado SEGURO (suma >= 80 y todos >= 5)"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
+        # Chequeos totalizando 80 puntos, todos >= 5 -> resultado SEGURO
         data = {
             "turno_id": setup_data["turno_id"],
             "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"descripcion": "Luces y señalización", "puntuacion": 9},
-                {"descripcion": "Frenos", "puntuacion": 8},
+                {"descripcion": "Luces y señalización", "puntuacion": 10},
+                {"descripcion": "Frenos", "puntuacion": 10},
                 {"descripcion": "Dirección y suspensión", "puntuacion": 10},
-                {"descripcion": "Neumáticos", "puntuacion": 7},
-                {"descripcion": "Chasis y estructura", "puntuacion": 9},
-                {"descripcion": "Contaminación y ruidos", "puntuacion": 8},
+                {"descripcion": "Neumáticos", "puntuacion": 10},
+                {"descripcion": "Chasis y estructura", "puntuacion": 10},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
                 {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
-                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 9}
-            ]
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
+            ],
+            "observacion": "Vehículo en excelentes condiciones"
         }
         
         response = client.post('/api/inspections', json=data, headers=headers)
@@ -197,7 +199,9 @@ def test_create_inspection_success(client, app, setup_data):
         response_data = response.get_json()
         assert response_data['turno_id'] == setup_data["turno_id"]
         assert response_data['vehiculo_matricula'] == setup_data["matricula"]
-        assert response_data['estado'] == 'EN_PROCESO'  # Ya no PENDIENTE
+        assert response_data['estado'] == 'COMPLETADA'
+        assert response_data['resultado'] == 'SEGURO'
+        assert response_data['puntuacion_total'] == 80
         assert 'id' in response_data
         assert 'chequeos' in response_data
         assert len(response_data['chequeos']) == 8
@@ -287,50 +291,17 @@ def test_create_inspection_invalid_chequeo_count(client, app, setup_data):
 
 
 # ========================================
-# TESTS PARA /api/inspections/{id}/cerrar (POST - Cerrar inspección)
+# TESTS PARA creación con resultado RECHEQUEAR
 # ========================================
 
-def test_close_inspection_resultado_seguro(client, app, setup_data):
-    """Test: Cerrar inspección con resultado SEGURO (suma >= 80 y todos >= 5)"""
+def test_create_inspection_resultado_rechequear_por_total_bajo(client, app, setup_data):
+    """Test: Crear inspección con resultado RECHEQUEAR por total < 40 (observación obligatoria)"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección con chequeos totalizando 80 puntos y todos >= 5
-        data = {
-            "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"],
-            "chequeos": [
-                {"descripcion": "Luces y señalización", "puntuacion": 10},
-                {"descripcion": "Frenos", "puntuacion": 10},
-                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
-                {"descripcion": "Neumáticos", "puntuacion": 10},
-                {"descripcion": "Chasis y estructura", "puntuacion": 10},
-                {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
-                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
-                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
-            ]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Cerrar inspección (sin observación, ya que es SEGURO)
-        response = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
-        
-        assert response.status_code == 200
-        response_data = response.get_json()
-        assert response_data['resultado'] == 'SEGURO'
-        assert response_data['puntuacion_total'] == 80
-
-
-def test_close_inspection_resultado_rechequear_por_total_bajo(client, app, setup_data):
-    """Test: Cerrar inspección con resultado RECHEQUEAR por total < 40"""
-    with app.app_context():
-        token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
-        headers = {'Authorization': f'Bearer {token}'}
-        
-        # Crear inspección con chequeos totalizando < 40 puntos
-        data = {
+        # Intentar crear SIN observación (debe fallar)
+        data_sin_obs = {
             "turno_id": setup_data["turno_id"],
             "inspector_id": setup_data["inspector_id"],
             "chequeos": [
@@ -344,26 +315,26 @@ def test_close_inspection_resultado_rechequear_por_total_bajo(client, app, setup
                 {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 2}
             ]
         }
-        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Intentar cerrar SIN observación (debe fallar)
-        response_sin_obs = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
+        response_sin_obs = client.post('/api/inspections', json=data_sin_obs, headers=headers)
         assert response_sin_obs.status_code == 400
         
-        # Cerrar CON observación
-        data_close = {"observacion": "Problemas graves detectados en frenos y emisiones que requieren reparación inmediata"}
-        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
+        # Crear CON observación
+        data_con_obs = {
+            **data_sin_obs,
+            "observacion": "Problemas graves detectados en frenos y emisiones que requieren reparación inmediata"
+        }
+        response = client.post('/api/inspections', json=data_con_obs, headers=headers)
         
-        assert response.status_code == 200
+        assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['resultado'] == 'RECHEQUEAR'
         assert response_data['puntuacion_total'] == 34
+        assert response_data['estado'] == 'COMPLETADA'
         assert response_data['observacion'] is not None
 
 
-def test_close_inspection_resultado_rechequear_por_item_bajo(client, app, setup_data):
-    """Test: Cerrar inspección con resultado RECHEQUEAR por algún item < 5"""
+def test_create_inspection_resultado_rechequear_por_item_bajo(client, app, setup_data):
+    """Test: Crear inspección con resultado RECHEQUEAR por algún item < 5"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
@@ -381,22 +352,19 @@ def test_close_inspection_resultado_rechequear_por_item_bajo(client, app, setup_
                 {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
                 {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
                 {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
-            ]
+            ],
+            "observacion": "Frenos delanteros insuficientes, requiere reemplazo"
         }
-        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
+        response = client.post('/api/inspections', json=data, headers=headers)
         
-        # Cerrar CON observación
-        data_close = {"observacion": "Frenos delanteros insuficientes, requiere reemplazo"}
-        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
-        
-        assert response.status_code == 200
+        assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['resultado'] == 'RECHEQUEAR'
         assert response_data['puntuacion_total'] == 74
+        assert response_data['estado'] == 'COMPLETADA'
 
 
-def test_close_inspection_caso_borde_80_puntos(client, app, setup_data):
+def test_create_inspection_caso_borde_80_puntos(client, app, setup_data):
     """Test: Caso borde - exactamente 80 puntos con todos los items >= 5 → SEGURO"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
@@ -417,28 +385,23 @@ def test_close_inspection_caso_borde_80_puntos(client, app, setup_data):
                 {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
             ]
         }
-        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
+        response = client.post('/api/inspections', json=data, headers=headers)
         
-        # Cerrar sin observación (ya que debería ser SEGURO)
-        response = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
-        
-        assert response.status_code == 200
+        assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['puntuacion_total'] == 80
         # Regla: >= 80 Y todos >= 5 → SEGURO
         assert response_data['resultado'] == 'SEGURO'
+        assert response_data['estado'] == 'COMPLETADA'
 
 
-def test_close_inspection_80_puntos_con_item_bajo(client, app, setup_data):
-    """Test: 80 puntos pero con un item < 5 → RECHEQUEAR (falla condición de todos >= 5)"""
+def test_create_inspection_80_puntos_con_item_bajo(client, app, setup_data):
+    """Test: Total alto pero con un item < 5 → RECHEQUEAR (falla condición de todos >= 5)"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Nota: Es matemáticamente imposible llegar a exactamente 80 puntos con un item < 5
-        # porque 7 items * 10 puntos = 70, más 1 item < 5 = máximo 74 puntos
-        # Este test ilustra que incluso con total alto, un item < 5 → RECHEQUEAR
+        # Total alto pero con un item < 5 → RECHEQUEAR
         data = {
             "turno_id": setup_data["turno_id"],
             "inspector_id": setup_data["inspector_id"],
@@ -451,28 +414,25 @@ def test_close_inspection_80_puntos_con_item_bajo(client, app, setup_data):
                 {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
                 {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
                 {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
-            ]
+            ],
+            "observacion": "Los frenos no cumplen con el estándar mínimo requerido"
         }
-        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
+        response = client.post('/api/inspections', json=data, headers=headers)
         
-        # Cerrar CON observación
-        data_close = {"observacion": "Los frenos no cumplen con el estándar mínimo requerido"}
-        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
-        
-        assert response.status_code == 200
+        assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['puntuacion_total'] == 74
         assert response_data['resultado'] == 'RECHEQUEAR'
+        assert response_data['estado'] == 'COMPLETADA'
 
 
-def test_close_inspection_caso_borde_40_puntos(client, app, setup_data):
+def test_create_inspection_caso_borde_40_puntos(client, app, setup_data):
     """Test: Caso borde - exactamente 40 puntos → RECHEQUEAR"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección con total = 40
+        # Crear inspección con total = 40 (rango intermedio → RECHEQUEAR)
         data = {
             "turno_id": setup_data["turno_id"],
             "inspector_id": setup_data["inspector_id"],
@@ -485,20 +445,17 @@ def test_close_inspection_caso_borde_40_puntos(client, app, setup_data):
                 {"descripcion": "Contaminación y ruidos", "puntuacion": 5},
                 {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 5},
                 {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 5}
-            ]
+            ],
+            "observacion": "Puntuación mínima aceptable, requiere monitoreo"
         }
-        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
+        response = client.post('/api/inspections', json=data, headers=headers)
         
-        # Cerrar CON observación
-        data_close = {"observacion": "Puntuación mínima aceptable, requiere monitoreo"}
-        response = client.patch(f'/api/inspections/{inspeccion_id}', json=data_close, headers=headers)
-        
-        assert response.status_code == 200
+        assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['puntuacion_total'] == 40
         # Regla: <40 → RECHEQUEAR, pero =40 cae en el else (no <40 pero tampoco >=80)
         assert response_data['resultado'] == 'RECHEQUEAR'
+        assert response_data['estado'] == 'COMPLETADA'
 
 
 # ========================================
@@ -597,15 +554,4 @@ def test_crear_inspeccion_sin_token(client, app, setup_data):
         assert 'error' in response_data
 
 
-def test_close_inspection_without_inspector_role(client, app, setup_data):
-    """Test: Cerrar inspección falla si el usuario no es INSPECTOR"""
-    with app.app_context():
-        token = get_auth_token(client, app, "duenio_test@example.com", "password123", "DUENIO")
-        headers = {'Authorization': f'Bearer {token}'}
-        
-        response = client.patch('/api/inspections/1', json={}, headers=headers)
-        
-        assert response.status_code == 403
-        response_data = response.get_json()
-        assert 'error' in response_data
 

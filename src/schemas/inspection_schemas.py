@@ -19,6 +19,7 @@ class InspectionCreateRequest(BaseModel):
     turno_id: int
     inspector_id: int
     chequeos: list[ChequeoRequest] = Field(..., min_length=8, max_length=8, description="Los 8 chequeos de la inspección")
+    observacion: str | None = Field(None, min_length=10, max_length=500, description="Observación sobre la inspección (obligatoria si resultado es RECHEQUEAR)")
     
     @field_validator('chequeos')
     @classmethod
@@ -29,11 +30,7 @@ class InspectionCreateRequest(BaseModel):
         return v
 
 
-class InspectionCloseRequest(BaseModel):
-    observacion: str | None = Field(None, min_length=10, max_length=500)
-
-
-# Response schemas
+# Response schemas (ChequeoResponse, InspectionDetailResponse, InspectionListResponse)
 class ChequeoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     

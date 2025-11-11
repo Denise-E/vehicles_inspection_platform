@@ -17,7 +17,7 @@ class InspectionService:
     @staticmethod
     def create_inspection(data: dict) -> Inspeccion:
         """
-        Crea una inspección asociada a un turno.
+        Crea una inspección completa
         
         Validaciones:
         - El turno debe existir
@@ -25,10 +25,16 @@ class InspectionService:
         - El turno no debe tener ya una inspección
         - El inspector debe existir y tener rol INSPECTOR
         - Debe proporcionar los 8 chequeos
+        
+        Reglas de negocio:
+        - SEGURO: suma >= 80 Y ningún chequeo < 5
+        - RECHEQUEAR: suma < 40 O algún chequeo < 5 (observación OBLIGATORIA)
+        - Rango intermedio (40-79): también RECHEQUEAR (observación OBLIGATORIA)
         """
         turno_id = data["turno_id"]
         inspector_id = data["inspector_id"]
         chequeos_data = data["chequeos"]
+        observacion = data.get("observacion")
         
         # Verificar que el turno existe
         turno = Turno.query.filter_by(id=turno_id).first()
@@ -59,64 +65,8 @@ class InspectionService:
         
         vehiculo = turno.vehiculo
         
-        new_inspection = Inspeccion(
-            vehiculo_id=vehiculo.id,
-            turno_id=turno_id,
-            inspector_id=inspector_id,
-            fecha=datetime.utcnow(),
-            puntuacion_total=0,
-            estado='EN_PROCESO'  
-        )
-        
-        db.session.add(new_inspection)
-        db.session.flush() 
-        
-        for chequeo_data in chequeos_data:
-            chequeo = Chequeo(
-                inspeccion_id=new_inspection.id,
-                descripcion=chequeo_data["descripcion"],
-                puntuacion=chequeo_data["puntuacion"],
-                fecha=datetime.utcnow()
-            )
-            db.session.add(chequeo)
-        
-        db.session.commit()
-        db.session.refresh(new_inspection, ['chequeos', 'vehiculo', 'inspector', 'turno'])
-        
-        return new_inspection
-    
-    @staticmethod
-    def close_inspection(inspeccion_id: int, observacion: str | None = None) -> Inspeccion:
-        """
-        Cierra una inspección, calcula el resultado y actualiza el estado del vehículo.
-        
-        REGLAS DE NEGOCIO:
-        - SEGURO: suma >= 80 Y ningún chequeo < 5
-        - RECHEQUEAR: suma < 40 O algún chequeo < 5 (observación OBLIGATORIA)
-        - Rango intermedio (40-79): también RECHEQUEAR (observación OBLIGATORIA)
-        
-        Validaciones:
-        - La inspección debe existir
-        - La inspección debe tener exactamente 8 chequeos
-        - La inspección debe estar en estado EN_PROCESO
-        - Si el resultado es RECHEQUEAR, debe haber observación
-        """
-        # Verificar que la inspección existe
-        inspeccion = Inspeccion.query.filter_by(id=inspeccion_id).first()
-        if not inspeccion:
-            raise ValueError(f"Inspección con ID {inspeccion_id} no encontrada")
-        
-        # Verificar que está en estado EN_PROCESO
-        if inspeccion.estado != 'EN_PROCESO':
-            raise ValueError("Solo se pueden cerrar inspecciones en estado EN_PROCESO")
-        
-        # Verificar que tiene exactamente 8 chequeos
-        db.session.refresh(inspeccion, ['chequeos'])
-        if len(inspeccion.chequeos) != 8:
-            raise ValueError("La inspección debe tener exactamente 8 chequeos antes de cerrarla")
-        
-        # Calcular puntuación total
-        puntuaciones = [chequeo.puntuacion for chequeo in inspeccion.chequeos]
+        # Calcular puntuación total y determinar resultado
+        puntuaciones = [chequeo["puntuacion"] for chequeo in chequeos_data]
         puntuacion_total = sum(puntuaciones)
         minimo_chequeo = min(puntuaciones)
         
@@ -135,7 +85,7 @@ class InspectionService:
                     "detallada (mínimo 10 caracteres) explicando los problemas detectados"
                 )
         else:
-            # Caso intermedio: 40 <= puntuacion <= 80 con todos los chequeos >= 5
+            # Caso intermedio: 40 <= puntuacion <= 79 con todos los chequeos >= 5
             resultado_nombre = "RECHEQUEAR"
             estado_vehiculo_nombre = "RECHEQUEAR"
             
@@ -155,26 +105,39 @@ class InspectionService:
         if not estado_vehiculo:
             raise ValueError(f"Estado '{estado_vehiculo_nombre}' no encontrado en la base de datos")
         
-        # Actualizar inspección
-        inspeccion.puntuacion_total = puntuacion_total
-        inspeccion.resultado_id = resultado.id
-        inspeccion.observacion = observacion
-        inspeccion.estado = 'COMPLETADA'
+        new_inspection = Inspeccion(
+            vehiculo_id=vehiculo.id,
+            turno_id=turno_id,
+            inspector_id=inspector_id,
+            fecha=datetime.utcnow(),
+            puntuacion_total=puntuacion_total,
+            resultado_id=resultado.id,
+            observacion=observacion,
+            estado='COMPLETADA'
+        )
         
-        # Actualizar estado del vehículo
-        vehiculo = inspeccion.vehiculo
+        db.session.add(new_inspection)
+        db.session.flush() 
+        
+        for chequeo_data in chequeos_data:
+            chequeo = Chequeo(
+                inspeccion_id=new_inspection.id,
+                descripcion=chequeo_data["descripcion"],
+                puntuacion=chequeo_data["puntuacion"],
+                fecha=datetime.utcnow()
+            )
+            db.session.add(chequeo)
+        
         vehiculo.estado_id = estado_vehiculo.id
         
-        # Actualizar estado del turno a COMPLETADO
-        turno = inspeccion.turno
         estado_turno_completado = EstadoTurno.query.filter_by(nombre='COMPLETADO').first()
         if estado_turno_completado:
             turno.estado_id = estado_turno_completado.id
         
         db.session.commit()
-        db.session.refresh(inspeccion, ['chequeos', 'vehiculo', 'inspector', 'turno', 'resultado'])
+        db.session.refresh(new_inspection, ['chequeos', 'vehiculo', 'inspector', 'turno', 'resultado'])
         
-        return inspeccion
+        return new_inspection
     
     @staticmethod
     def get_inspection_by_id(inspeccion_id: int, user_id: int = None, user_role: str = None) -> Inspeccion:

@@ -2,7 +2,6 @@ from src.services.inspection_service import InspectionService
 from src.schemas.inspection_schemas import (
     InspectionCreateRequest,
     InspectionDetailResponse,
-    InspectionCloseRequest,
     InspectionListResponse
 )
 from flask import request, jsonify
@@ -44,44 +43,6 @@ def create_inspection() -> Tuple[dict, int]:
         }
         response = InspectionDetailResponse(**response_data)
         return jsonify(response.model_dump()), 201
-    except ValidationError:
-        raise
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-def close_inspection(inspeccion_id: int) -> Tuple[dict, int]:
-    """
-    Cierra una inspección, calcula el resultado y actualiza el estado del vehículo.
-    Solo usuarios con rol INSPECTOR pueden cerrar inspecciones.
-    """
-    try:
-        data = InspectionCloseRequest(**request.json)
-        inspection = InspectionService.close_inspection(inspeccion_id, data.observacion)
-        
-        chequeos_response = []
-        for chequeo in inspection.chequeos:
-            chequeos_response.append({
-                "id": chequeo.id,
-                "descripcion": chequeo.descripcion,
-                "puntuacion": chequeo.puntuacion,
-                "fecha": chequeo.fecha
-            })
-        
-        response_data = {
-            "id": inspection.id,
-            "turno_id": inspection.turno_id,
-            "vehiculo_matricula": inspection.vehiculo.matricula,
-            "inspector_nombre": inspection.inspector.nombre_completo,
-            "fecha": inspection.fecha,
-            "puntuacion_total": inspection.puntuacion_total,
-            "resultado": inspection.resultado.nombre if inspection.resultado else None,
-            "observacion": inspection.observacion,
-            "estado": inspection.estado,
-            "chequeos": chequeos_response
-        }
-        response = InspectionDetailResponse(**response_data)
-        return jsonify(response.model_dump()), 200
     except ValidationError:
         raise
     except Exception as e:
