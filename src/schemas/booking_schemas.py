@@ -73,6 +73,8 @@ class BookingResponse(BaseModel):
     estado: str
     creado_por: int
     nombre_creador: str
+    puntuacion_total: Optional[int] = None
+    resultado: Optional[str] = None
 
 
 class BookingListResponse(BaseModel):

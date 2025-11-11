@@ -264,6 +264,12 @@ def detalle(turno_id: int):
               type: integer
             nombre_creador:
               type: string
+            puntuacion_total:
+              type: integer
+              description: Puntuación de la inspección (solo para turnos COMPLETADO)
+            resultado:
+              type: string
+              description: Resultado de la inspección (solo para turnos COMPLETADO)
       400:
         description: Turno no encontrado
         schema:
@@ -316,6 +322,12 @@ def listar_todos():
                     type: integer
                   nombre_creador:
                     type: string
+                  puntuacion_total:
+                    type: integer
+                    description: Puntuación de la inspección (solo para turnos COMPLETADO)
+                  resultado:
+                    type: string
+                    description: Resultado de la inspección (solo para turnos COMPLETADO)
             total:
               type: integer
       401:

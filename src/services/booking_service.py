@@ -196,7 +196,10 @@ class BookingService:
             if turno.vehiculo.duenio_id != user_id:
                 raise ValueError("No tienes permiso para ver este turno. Solo puedes ver turnos de tus propios vehículos")
         
-        db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
+        db.session.refresh(turno, ['vehiculo', 'estado', 'creador', 'inspeccion'])
+        # Si tiene inspección, cargar también el resultado
+        if turno.inspeccion:
+            db.session.refresh(turno.inspeccion, ['resultado'])
         return turno
 
     @staticmethod
@@ -212,7 +215,9 @@ class BookingService:
         
         # Carga relaciones
         for turno in turnos:
-            db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
+            db.session.refresh(turno, ['vehiculo', 'estado', 'creador', 'inspeccion'])
+            if turno.inspeccion:
+                db.session.refresh(turno.inspeccion, ['resultado'])
         
         return turnos
 
@@ -235,7 +240,9 @@ class BookingService:
         
         # Carga relaciones
         for turno in turnos:
-            db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
+            db.session.refresh(turno, ['vehiculo', 'estado', 'creador', 'inspeccion'])
+            if turno.inspeccion:
+                db.session.refresh(turno.inspeccion, ['resultado'])
         
         return turnos
 
@@ -256,6 +263,8 @@ class BookingService:
                      .all())
         
         for turno in turnos:
-            db.session.refresh(turno, ['vehiculo', 'estado', 'creador'])
+            db.session.refresh(turno, ['vehiculo', 'estado', 'creador', 'inspeccion'])
+            if turno.inspeccion:
+                db.session.refresh(turno.inspeccion, ['resultado'])
         
         return turnos

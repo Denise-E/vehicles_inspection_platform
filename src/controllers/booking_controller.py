@@ -116,6 +116,11 @@ def obtener_turno(turno_id: int) -> Tuple[dict, int]:
             "nombre_creador": turno.creador.nombre_completo
         }
         
+        # Si el turno está COMPLETADO, incluir información de inspección
+        if turno.estado_id == 3 and turno.inspeccion:
+            response_data["puntuacion_total"] = turno.inspeccion.puntuacion_total
+            response_data["resultado"] = turno.inspeccion.resultado.nombre if turno.inspeccion.resultado else None
+        
         response = BookingResponse(**response_data)
         return jsonify(response.model_dump()), 200
     except ValidationError:
@@ -135,7 +140,7 @@ def listar_turnos_por_usuario() -> Tuple[dict, int]:
         
         turnos_data = []
         for turno in turnos:
-            turnos_data.append({
+            turno_dict = {
                 "id": turno.id,
                 "vehiculo_id": turno.vehiculo_id,
                 "matricula": turno.vehiculo.matricula,
@@ -143,7 +148,13 @@ def listar_turnos_por_usuario() -> Tuple[dict, int]:
                 "estado": turno.estado.nombre,
                 "creado_por": turno.creado_por,
                 "nombre_creador": turno.creador.nombre_completo
-            })
+            }
+            
+            if turno.estado_id == 3 and turno.inspeccion:
+                turno_dict["puntuacion_total"] = turno.inspeccion.puntuacion_total
+                turno_dict["resultado"] = turno.inspeccion.resultado.nombre if turno.inspeccion.resultado else None
+            
+            turnos_data.append(turno_dict)
         
         response_data = {
             "turnos": turnos_data,
@@ -167,7 +178,7 @@ def listar_turnos_por_vehiculo(matricula: str) -> Tuple[dict, int]:
         
         turnos_data = []
         for turno in turnos:
-            turnos_data.append({
+            turno_dict = {
                 "id": turno.id,
                 "vehiculo_id": turno.vehiculo_id,
                 "matricula": turno.vehiculo.matricula,
@@ -175,7 +186,13 @@ def listar_turnos_por_vehiculo(matricula: str) -> Tuple[dict, int]:
                 "estado": turno.estado.nombre,
                 "creado_por": turno.creado_por,
                 "nombre_creador": turno.creador.nombre_completo
-            })
+            }
+            
+            if turno.estado_id == 3 and turno.inspeccion:
+                turno_dict["puntuacion_total"] = turno.inspeccion.puntuacion_total
+                turno_dict["resultado"] = turno.inspeccion.resultado.nombre if turno.inspeccion.resultado else None
+            
+            turnos_data.append(turno_dict)
         
         response_data = {
             "turnos": turnos_data,
@@ -199,7 +216,7 @@ def listar_todos_los_turnos() -> Tuple[dict, int]:
         
         turnos_data = []
         for turno in turnos:
-            turnos_data.append({
+            turno_dict = {
                 "id": turno.id,
                 "vehiculo_id": turno.vehiculo_id,
                 "matricula": turno.vehiculo.matricula,
@@ -207,7 +224,13 @@ def listar_todos_los_turnos() -> Tuple[dict, int]:
                 "estado": turno.estado.nombre,
                 "creado_por": turno.creado_por,
                 "nombre_creador": turno.creador.nombre_completo
-            })
+            }
+            
+            if turno.estado_id == 3 and turno.inspeccion:
+                turno_dict["puntuacion_total"] = turno.inspeccion.puntuacion_total
+                turno_dict["resultado"] = turno.inspeccion.resultado.nombre if turno.inspeccion.resultado else None
+            
+            turnos_data.append(turno_dict)
         
         response_data = {
             "turnos": turnos_data,
