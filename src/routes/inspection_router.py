@@ -15,6 +15,11 @@ inspections = Blueprint('inspections', __name__)
 def crear():
     """
     Crear una inspección completa con sus 8 chequeos
+    
+    Reglas de negocio:
+    - SEGURO: 40 ≤ puntos ≤ 80 Y todos los chequeos ≥ 5
+    - RECHEQUEAR: puntos < 40 O algún chequeo < 5 (observación OBLIGATORIA)
+    - La inspección debe realizarse el día programado del turno
     ---
     tags:
       - Inspecciones
@@ -103,10 +108,10 @@ def crear():
             puntuacion_total:
               type: integer
               description: Suma total de las puntuaciones de los 8 chequeos
-            resultado:
-              type: string
-              enum: [SEGURO, RECHEQUEAR]
-              description: "SEGURO si >= 80 puntos y todos los chequeos >= 5, sino RECHEQUEAR"
+             resultado:
+               type: string
+               enum: [SEGURO, RECHEQUEAR]
+               description: "SEGURO si 40 ≤ puntos ≤ 80 Y todos >= 5, sino RECHEQUEAR"
             observacion:
               type: string
               description: "Observación obligatoria para resultado RECHEQUEAR"

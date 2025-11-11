@@ -34,8 +34,7 @@ def app():
         if not EstadoVehiculo.query.all():
             activo = EstadoVehiculo(nombre='ACTIVO')
             inactivo = EstadoVehiculo(nombre='INACTIVO')
-            rechequear = EstadoVehiculo(nombre='RECHEQUEAR')
-            db.session.add_all([activo, inactivo, rechequear])
+            db.session.add_all([activo, inactivo])
             db.session.commit()
         
         # Crear estados de turno

@@ -43,7 +43,7 @@ CREATE TABLE estado_vehiculo (
 );
 
 INSERT INTO estado_vehiculo (nombre)
-VALUES ('ACTIVO'), ('INACTIVO'), ('RECHEQUEAR');
+VALUES ('ACTIVO'), ('INACTIVO');
 
 -- ===========================================================
 -- TABLAS PRINCIPALES

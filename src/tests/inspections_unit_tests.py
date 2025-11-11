@@ -34,8 +34,7 @@ def app():
         if not EstadoVehiculo.query.all():
             activo = EstadoVehiculo(nombre='ACTIVO')
             inactivo = EstadoVehiculo(nombre='INACTIVO')
-            rechequear = EstadoVehiculo(nombre='RECHEQUEAR')
-            db.session.add_all([activo, inactivo, rechequear])
+            db.session.add_all([activo, inactivo])
             db.session.commit()
         
         # Crear estados de turno
@@ -139,13 +138,8 @@ def setup_data(app):
         db.session.add(vehiculo)
         db.session.commit()
         
-        # Crear turno CONFIRMADO
-        today = datetime.now()
-        days_ahead = 0 - today.weekday()
-        if days_ahead <= 0:
-            days_ahead += 7
-        next_monday = today + timedelta(days=days_ahead)
-        fecha_turno = next_monday.replace(hour=10, minute=0, second=0, microsecond=0)
+        # Crear turno CONFIRMADO para HOY
+        fecha_turno = datetime.utcnow().replace(hour=10, minute=0, second=0, microsecond=0)
         
         estado_confirmado = EstadoTurno.query.filter_by(nombre='CONFIRMADO').first()
         turno = Turno(
@@ -171,12 +165,12 @@ def setup_data(app):
 # ========================================
 
 def test_create_inspection_resultado_seguro(client, app, setup_data):
-    """Test: Crear inspección con resultado SEGURO (suma >= 80 y todos >= 5)"""
+    """Test: Crear inspección con resultado SEGURO (40 ≤ suma ≤ 80 y todos >= 5)"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Chequeos totalizando 80 puntos, todos >= 5 -> resultado SEGURO
+        # Chequeos totalizando 80 puntos (nota máxima), todos >= 5 -> resultado SEGURO
         data = {
             "turno_id": setup_data["turno_id"],
             "inspector_id": setup_data["inspector_id"],
@@ -351,7 +345,7 @@ def test_create_inspection_resultado_rechequear_por_item_bajo(client, app, setup
                 {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
                 {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
             ],
-            "observacion": "Frenos delanteros insuficientes, requiere reemplazo"
+            "observacion": "Luces delanteras insuficientes, requiere reemplazo"
         }
         response = client.post('/api/inspections', json=data, headers=headers)
         
@@ -362,12 +356,12 @@ def test_create_inspection_resultado_rechequear_por_item_bajo(client, app, setup
 
 
 def test_create_inspection_caso_borde_80_puntos(client, app, setup_data):
-    """Test: Caso borde - exactamente 80 puntos con todos los items >= 5 → SEGURO"""
+    """Test: Caso borde - exactamente 80 puntos con todos >= 5 → SEGURO (nota máxima)"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección con 80 puntos y todos los items >= 5
+        # 80 puntos (nota máxima) con todos >= 5 → SEGURO
         data = {
             "turno_id": setup_data["turno_id"],
             "inspector_id": setup_data["inspector_id"],
@@ -387,47 +381,17 @@ def test_create_inspection_caso_borde_80_puntos(client, app, setup_data):
         assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['puntuacion_total'] == 80
-        # Regla: >= 80 Y todos >= 5 → SEGURO
+        # Regla: 40 ≤ puntos ≤ 80 Y todos >= 5 → SEGURO
         assert response_data['resultado'] == 'SEGURO'
 
 
-def test_create_inspection_80_puntos_con_item_bajo(client, app, setup_data):
-    """Test: Total alto pero con un item < 5 → RECHEQUEAR (falla condición de todos >= 5)"""
-    with app.app_context():
-        token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
-        headers = {'Authorization': f'Bearer {token}'}
-        
-        # Total alto pero con un item < 5 → RECHEQUEAR
-        data = {
-            "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"],
-            "chequeos": [
-                {"descripcion": "Luces y señalización", "puntuacion": 4},  # < 5!
-                {"descripcion": "Frenos", "puntuacion": 10},
-                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
-                {"descripcion": "Neumáticos", "puntuacion": 10},
-                {"descripcion": "Chasis y estructura", "puntuacion": 10},
-                {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
-                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
-                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
-            ],
-            "observacion": "Los frenos no cumplen con el estándar mínimo requerido"
-        }
-        response = client.post('/api/inspections', json=data, headers=headers)
-        
-        assert response.status_code == 201
-        response_data = response.get_json()
-        assert response_data['puntuacion_total'] == 74
-        assert response_data['resultado'] == 'RECHEQUEAR'
-
-
 def test_create_inspection_caso_borde_40_puntos(client, app, setup_data):
-    """Test: Caso borde - exactamente 40 puntos → RECHEQUEAR"""
+    """Test: Caso borde - exactamente 40 puntos con todos >= 5 → SEGURO"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección con total = 40 (rango intermedio → RECHEQUEAR)
+        # 40 puntos (límite inferior) con todos >= 5 → SEGURO
         data = {
             "turno_id": setup_data["turno_id"],
             "inspector_id": setup_data["inspector_id"],
@@ -440,16 +404,76 @@ def test_create_inspection_caso_borde_40_puntos(client, app, setup_data):
                 {"descripcion": "Contaminación y ruidos", "puntuacion": 5},
                 {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 5},
                 {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 5}
-            ],
-            "observacion": "Puntuación mínima aceptable, requiere monitoreo"
+            ]
         }
         response = client.post('/api/inspections', json=data, headers=headers)
         
         assert response.status_code == 201
         response_data = response.get_json()
         assert response_data['puntuacion_total'] == 40
-        # Regla: <40 → RECHEQUEAR, pero =40 cae en el else (no <40 pero tampoco >=80)
-        assert response_data['resultado'] == 'RECHEQUEAR'
+        # Regla: 40 ≤ puntos ≤ 80 Y todos >= 5 → SEGURO
+        assert response_data['resultado'] == 'SEGURO'
+
+
+def test_create_inspection_rango_medio_seguro(client, app, setup_data):
+    """Test: 60 puntos con todos >= 5 → SEGURO (rango medio 40-80)"""
+    with app.app_context():
+        token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # 60 puntos (rango medio) con todos >= 5 → SEGURO
+        data = {
+            "turno_id": setup_data["turno_id"],
+            "inspector_id": setup_data["inspector_id"],
+            "chequeos": [
+                {"descripcion": "Luces y señalización", "puntuacion": 8},
+                {"descripcion": "Frenos", "puntuacion": 7},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 8},
+                {"descripcion": "Neumáticos", "puntuacion": 7},
+                {"descripcion": "Chasis y estructura", "puntuacion": 8},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 7},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 8},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 7}
+            ]
+        }
+        response = client.post('/api/inspections', json=data, headers=headers)
+        
+        assert response.status_code == 201
+        response_data = response.get_json()
+        assert response_data['puntuacion_total'] == 60
+        # Regla: 40 ≤ puntos ≤ 80 Y todos >= 5 → SEGURO
+        assert response_data['resultado'] == 'SEGURO'
+
+
+def test_create_inspection_fecha_incorrecta(client, app, setup_data):
+    """Test: Crear inspección falla si no es el día programado del turno"""
+    with app.app_context():
+        from datetime import timedelta
+        from src.models import Turno
+        
+        token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
+        headers = {'Authorization': f'Bearer {token}'}
+        
+        # Modificar la fecha del turno para que sea mañana
+        turno = Turno.query.filter_by(id=setup_data["turno_id"]).first()
+        turno.fecha = datetime.utcnow() + timedelta(days=1)
+        db.session.commit()
+        
+        data = {
+            "turno_id": setup_data["turno_id"],
+            "inspector_id": setup_data["inspector_id"],
+            "chequeos": [
+                {"descripcion": f"Chequeo {i}", "puntuacion": 10}
+                for i in range(1, 9)
+            ]
+        }
+        
+        response = client.post('/api/inspections', json=data, headers=headers)
+        
+        assert response.status_code == 400
+        response_data = response.get_json()
+        assert 'error' in response_data
+        assert 'día programado' in response_data['error'].lower()
 
 
 # ========================================

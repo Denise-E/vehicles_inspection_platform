@@ -4,8 +4,7 @@ from src.models import (
     Chequeo, 
     Turno, 
     EstadoTurno, 
-    Vehiculo, 
-    EstadoVehiculo,
+    Vehiculo,
     ResultadoInspeccion,
     Usuario
 )
@@ -25,11 +24,11 @@ class InspectionService:
         - El turno no debe tener ya una inspección
         - El inspector debe existir y tener rol INSPECTOR
         - Debe proporcionar los 8 chequeos
+        - La inspección debe realizarse el día programado del turno
         
         Reglas de negocio:
-        - SEGURO: suma >= 80 Y ningún chequeo < 5
+        - SEGURO: 40 ≤ suma ≤ 80 Y todos los chequeos ≥ 5
         - RECHEQUEAR: suma < 40 O algún chequeo < 5 (observación OBLIGATORIA)
-        - Rango intermedio (40-79): también RECHEQUEAR (observación OBLIGATORIA)
         """
         turno_id = data["turno_id"]
         inspector_id = data["inspector_id"]
@@ -51,6 +50,15 @@ class InspectionService:
         if existing_inspection:
             raise ValueError(f"El turno {turno_id} ya tiene una inspección asociada")
         
+        # Validar que la inspección se realiza el día programado del turno
+        fecha_actual = datetime.utcnow().date()
+        fecha_turno = turno.fecha.date() if isinstance(turno.fecha, datetime) else turno.fecha
+        if fecha_actual != fecha_turno:
+            raise ValueError(
+                f"La inspección solo puede realizarse el día programado del turno. "
+                f"Fecha del turno: {fecha_turno}, Fecha actual: {fecha_actual}"
+            )
+        
         # Verificar que el inspector existe y tiene rol INSPECTOR
         inspector = Usuario.query.filter_by(id=inspector_id).first()
         if not inspector:
@@ -70,13 +78,9 @@ class InspectionService:
         puntuacion_total = sum(puntuaciones)
         minimo_chequeo = min(puntuaciones)
         
-        # Determinar resultado según reglas de negocio
-        if puntuacion_total >= 80 and minimo_chequeo >= 5:
-            resultado_nombre = "SEGURO"
-            estado_vehiculo_nombre = "ACTIVO"
-        elif puntuacion_total < 40 or minimo_chequeo < 5:
+        # Determinar resultado de inspección según reglas de negocio
+        if puntuacion_total < 40 or minimo_chequeo < 5:
             resultado_nombre = "RECHEQUEAR"
-            estado_vehiculo_nombre = "RECHEQUEAR"
             
             # Validar observación obligatoria
             if not observacion or len(observacion.strip()) < 10:
@@ -85,25 +89,12 @@ class InspectionService:
                     "detallada (mínimo 10 caracteres) explicando los problemas detectados"
                 )
         else:
-            # Caso intermedio: 40 <= puntuacion <= 79 con todos los chequeos >= 5
-            resultado_nombre = "RECHEQUEAR"
-            estado_vehiculo_nombre = "RECHEQUEAR"
-            
-            if not observacion or len(observacion.strip()) < 10:
-                raise ValueError(
-                    "Para un resultado RECHEQUEAR es obligatorio proporcionar una observación "
-                    "detallada (mínimo 10 caracteres) explicando los problemas detectados"
-                )
+            resultado_nombre = "SEGURO"
         
         # Obtener resultado de inspección
         resultado = ResultadoInspeccion.query.filter_by(nombre=resultado_nombre).first()
         if not resultado:
             raise ValueError(f"Resultado '{resultado_nombre}' no encontrado en la base de datos")
-        
-        # Obtener estado de vehículo
-        estado_vehiculo = EstadoVehiculo.query.filter_by(nombre=estado_vehiculo_nombre).first()
-        if not estado_vehiculo:
-            raise ValueError(f"Estado '{estado_vehiculo_nombre}' no encontrado en la base de datos")
         
         new_inspection = Inspeccion(
             vehiculo_id=vehiculo.id,
@@ -126,8 +117,6 @@ class InspectionService:
                 fecha=datetime.utcnow()
             )
             db.session.add(chequeo)
-        
-        vehiculo.estado_id = estado_vehiculo.id
         
         estado_turno_completado = EstadoTurno.query.filter_by(nombre='COMPLETADO').first()
         if estado_turno_completado:
