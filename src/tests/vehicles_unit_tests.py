@@ -347,20 +347,35 @@ def test_get_vehicle_profile_not_found(client, app):
 # ========================================
 
 def test_list_all_vehicles_success(client, app):
-    """Test: Listar todos los vehículos exitosamente con JWT"""
+    """Test: Listar todos los vehículos exitosamente con JWT (ADMIN ve todos)"""
     with app.app_context():
-        # Obtener token
-        token = get_auth_token(client, app)
+        # Crear usuario ADMIN y obtener token
+        rol_admin = UsuarioRol.query.filter_by(nombre='ADMIN').first()
+        admin_user = Usuario(
+            nombre_completo="Admin User",
+            mail="admin_list@example.com",
+            telefono="111222333",
+            hash_password=hash_password("password123"),
+            rol_id=rol_admin.id,
+            activo=True
+        )
+        db.session.add(admin_user)
+        db.session.commit()
+        
+        # Login como ADMIN
+        login_data = {"mail": "admin_list@example.com", "contrasenia": "password123"}
+        login_response = client.post('/api/users/sessions', json=login_data)
+        token = login_response.get_json()['token']
         headers = {'Authorization': f'Bearer {token}'}
         
         # Crear usuarios y vehículos
-        rol = UsuarioRol.query.filter_by(nombre='DUENIO').first()
+        rol_duenio = UsuarioRol.query.filter_by(nombre='DUENIO').first()
         user1 = Usuario(
             nombre_completo="Luis Hernandez",
             mail="luis@example.com",
             telefono="666777888",
             hash_password=hash_password("password123"),
-            rol_id=rol.id,
+            rol_id=rol_duenio.id,
             activo=True
         )
         user2 = Usuario(
@@ -368,7 +383,7 @@ def test_list_all_vehicles_success(client, app):
             mail="ana@example.com",
             telefono="999000111",
             hash_password=hash_password("password123"),
-            rol_id=rol.id,
+            rol_id=rol_duenio.id,
             activo=True
         )
         db.session.add_all([user1, user2])
@@ -394,7 +409,7 @@ def test_list_all_vehicles_success(client, app):
         db.session.add_all([vehicle1, vehicle2])
         db.session.commit()
         
-        # Listar vehículos
+        # Listar vehículos como ADMIN (debe ver todos)
         response = client.get('/api/vehicles', headers=headers)
         
         assert response.status_code == 200
