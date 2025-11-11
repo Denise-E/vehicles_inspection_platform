@@ -1,9 +1,7 @@
 from src.services.inspection_service import InspectionService
 from src.schemas.inspection_schemas import (
     InspectionCreateRequest,
-    InspectionResponse,
     InspectionDetailResponse,
-    ChequeosListRequest,
     InspectionCloseRequest,
     InspectionListResponse
 )
@@ -19,7 +17,18 @@ def create_inspection() -> Tuple[dict, int]:
     """
     try:
         data = InspectionCreateRequest(**request.json)
-        inspection = InspectionService.create_inspection(data.model_dump())
+        inspection_data = data.model_dump()
+        
+        inspection = InspectionService.create_inspection(inspection_data)
+        
+        chequeos_response = []
+        for chequeo in inspection.chequeos:
+            chequeos_response.append({
+                "id": chequeo.id,
+                "descripcion": chequeo.descripcion,
+                "puntuacion": chequeo.puntuacion,
+                "fecha": chequeo.fecha
+            })
         
         response_data = {
             "id": inspection.id,
@@ -30,40 +39,11 @@ def create_inspection() -> Tuple[dict, int]:
             "puntuacion_total": inspection.puntuacion_total,
             "resultado": inspection.resultado.nombre if inspection.resultado else None,
             "observacion": inspection.observacion,
-            "estado": inspection.estado
+            "estado": inspection.estado,
+            "chequeos": chequeos_response
         }
-        response = InspectionResponse(**response_data)
+        response = InspectionDetailResponse(**response_data)
         return jsonify(response.model_dump()), 201
-    except ValidationError:
-        raise
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
-
-
-def register_chequeos(inspeccion_id: int) -> Tuple[dict, int]:
-    """
-    Registra los 8 chequeos de una inspección.
-    """
-    try:
-        data = ChequeosListRequest(**request.json)
-        
-        chequeos_data = [chequeo.model_dump() for chequeo in data.chequeos]
-        
-        inspection = InspectionService.register_chequeos(inspeccion_id, chequeos_data)
-        
-        response_data = {
-            "id": inspection.id,
-            "turno_id": inspection.turno_id,
-            "vehiculo_matricula": inspection.vehiculo.matricula,
-            "inspector_nombre": inspection.inspector.nombre_completo,
-            "fecha": inspection.fecha,
-            "puntuacion_total": inspection.puntuacion_total,
-            "resultado": inspection.resultado.nombre if inspection.resultado else None,
-            "observacion": inspection.observacion,
-            "estado": inspection.estado
-        }
-        response = InspectionResponse(**response_data)
-        return jsonify(response.model_dump()), 200
     except ValidationError:
         raise
     except Exception as e:
@@ -80,11 +60,10 @@ def close_inspection(inspeccion_id: int) -> Tuple[dict, int]:
         inspection = InspectionService.close_inspection(inspeccion_id, data.observacion)
         
         chequeos_response = []
-        for idx, chequeo in enumerate(inspection.chequeos, start=1):
+        for chequeo in inspection.chequeos:
             chequeos_response.append({
                 "id": chequeo.id,
-                "item_numero": idx,
-                "descripcion": f"Chequeo {idx}",
+                "descripcion": chequeo.descripcion,
                 "puntuacion": chequeo.puntuacion,
                 "fecha": chequeo.fecha
             })
@@ -117,11 +96,10 @@ def get_inspection(inspeccion_id: int) -> Tuple[dict, int]:
         inspection = InspectionService.get_inspection_by_id(inspeccion_id, user_id=user_id, user_role=user_role)
         
         chequeos_response = []
-        for idx, chequeo in enumerate(inspection.chequeos, start=1):
+        for chequeo in inspection.chequeos:
             chequeos_response.append({
                 "id": chequeo.id,
-                "item_numero": idx,
-                "descripcion": f"Chequeo {idx}",
+                "descripcion": chequeo.descripcion,
                 "puntuacion": chequeo.puntuacion,
                 "fecha": chequeo.fecha
             })

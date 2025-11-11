@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from src import create_app, db
 from src.models import (
     Usuario, UsuarioRol, Vehiculo, EstadoVehiculo, 
-    Turno, EstadoTurno, Inspeccion, ResultadoInspeccion, Chequeo
+    Turno, EstadoTurno, ResultadoInspeccion
 )
 from src.utils.hash_utils import hash_password
 
@@ -171,14 +171,24 @@ def setup_data(app):
 # ========================================
 
 def test_create_inspection_success(client, app, setup_data):
-    """Test: Crear inspección exitosamente con rol INSPECTOR"""
+    """Test: Crear inspección completa con 8 chequeos exitosamente con rol INSPECTOR"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
         data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
+            "inspector_id": setup_data["inspector_id"],
+            "chequeos": [
+                {"descripcion": "Luces y señalización", "puntuacion": 9},
+                {"descripcion": "Frenos", "puntuacion": 8},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 7},
+                {"descripcion": "Chasis y estructura", "puntuacion": 9},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 8},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 9}
+            ]
         }
         
         response = client.post('/api/inspections', json=data, headers=headers)
@@ -187,8 +197,10 @@ def test_create_inspection_success(client, app, setup_data):
         response_data = response.get_json()
         assert response_data['turno_id'] == setup_data["turno_id"]
         assert response_data['vehiculo_matricula'] == setup_data["matricula"]
-        assert response_data['estado'] == 'PENDIENTE'
+        assert response_data['estado'] == 'EN_PROCESO'  # Ya no PENDIENTE
         assert 'id' in response_data
+        assert 'chequeos' in response_data
+        assert len(response_data['chequeos']) == 8
 
 
 def test_create_inspection_without_inspector_role(client, app, setup_data):
@@ -199,7 +211,17 @@ def test_create_inspection_without_inspector_role(client, app, setup_data):
         
         data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
+            "inspector_id": setup_data["inspector_id"],
+            "chequeos": [
+                {"descripcion": "Luces y señalización", "puntuacion": 9},
+                {"descripcion": "Frenos", "puntuacion": 8},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 7},
+                {"descripcion": "Chasis y estructura", "puntuacion": 9},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 8},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 9}
+            ]
         }
         
         response = client.post('/api/inspections', json=data, headers=headers)
@@ -214,7 +236,17 @@ def test_create_inspection_without_token(client, app, setup_data):
     with app.app_context():
         data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
+            "inspector_id": setup_data["inspector_id"],
+            "chequeos": [
+                {"descripcion": "Luces y señalización", "puntuacion": 9},
+                {"descripcion": "Frenos", "puntuacion": 8},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 7},
+                {"descripcion": "Chasis y estructura", "puntuacion": 9},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 8},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 9}
+            ]
         }
         
         response = client.post('/api/inspections', json=data)
@@ -225,70 +257,29 @@ def test_create_inspection_without_token(client, app, setup_data):
 
 
 # ========================================
-# TESTS PARA /api/inspections/{id}/chequeos (POST - Registrar chequeos)
+# TESTS PARA validaciones de chequeos
 # ========================================
 
-def test_register_chequeos_success(client, app, setup_data):
-    """Test: Registrar 8 chequeos exitosamente"""
+def test_create_inspection_invalid_chequeo_count(client, app, setup_data):
+    """Test: Crear inspección falla si no son exactamente 8 chequeos"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección primero
-        data_inspeccion = {
+        # Intentar crear inspección con solo 5 chequeos
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Registrar 8 chequeos
-        data_chequeos = {
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 8},
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 9},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 7},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 8},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 9},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 8},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 9}
+                {"descripcion": "Luces y señalización", "puntuacion": 8},
+                {"descripcion": "Frenos", "puntuacion": 9},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 7},
+                {"descripcion": "Neumáticos", "puntuacion": 8},
+                {"descripcion": "Chasis y estructura", "puntuacion": 10}
             ]
         }
         
-        response = client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
-        
-        assert response.status_code == 200
-        response_data = response.get_json()
-        assert response_data['estado'] == 'EN_PROCESO'
-
-
-def test_register_chequeos_invalid_count(client, app, setup_data):
-    """Test: Registrar chequeos falla si no son exactamente 8"""
-    with app.app_context():
-        token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
-        headers = {'Authorization': f'Bearer {token}'}
-        
-        # Crear inspección
-        data_inspeccion = {
-            "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Intentar registrar solo 5 chequeos
-        data_chequeos = {
-            "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 8},
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 9},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 7},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 8},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10}
-            ]
-        }
-        
-        response = client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        response = client.post('/api/inspections', json=data, headers=headers)
         
         assert response.status_code == 400
         response_data = response.get_json()
@@ -300,33 +291,28 @@ def test_register_chequeos_invalid_count(client, app, setup_data):
 # ========================================
 
 def test_close_inspection_resultado_seguro(client, app, setup_data):
-    """Test: Cerrar inspección con resultado SEGURO (suma > 80 y todos >= 5)"""
+    """Test: Cerrar inspección con resultado SEGURO (suma >= 80 y todos >= 5)"""
     with app.app_context():
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
+        # Crear inspección con chequeos totalizando 80 puntos y todos >= 5
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Registrar chequeos con total > 80 y todos >= 5
-        data_chequeos = {
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 10},
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 10},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 10},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 10},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 10},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 10},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 10}
+                {"descripcion": "Luces y señalización", "puntuacion": 10},
+                {"descripcion": "Frenos", "puntuacion": 10},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 10},
+                {"descripcion": "Chasis y estructura", "puntuacion": 10},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
             ]
         }
-        client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
+        inspeccion_id = response_inspeccion.get_json()['id']
         
         # Cerrar inspección (sin observación, ya que es SEGURO)
         response = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
@@ -343,28 +329,23 @@ def test_close_inspection_resultado_rechequear_por_total_bajo(client, app, setup
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
+        # Crear inspección con chequeos totalizando < 40 puntos
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Registrar chequeos con total < 40
-        data_chequeos = {
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 3},
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 4},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 5},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 5},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 5},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 5},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 5},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 2}
+                {"descripcion": "Luces y señalización", "puntuacion": 3},
+                {"descripcion": "Frenos", "puntuacion": 4},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 5},
+                {"descripcion": "Neumáticos", "puntuacion": 5},
+                {"descripcion": "Chasis y estructura", "puntuacion": 5},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 5},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 5},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 2}
             ]
         }
-        client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
+        inspeccion_id = response_inspeccion.get_json()['id']
         
         # Intentar cerrar SIN observación (debe fallar)
         response_sin_obs = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
@@ -387,28 +368,23 @@ def test_close_inspection_resultado_rechequear_por_item_bajo(client, app, setup_
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
+        # Crear inspección con total alto pero un item < 5
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Registrar chequeos: total alto pero un item < 5
-        data_chequeos = {
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 4},  # < 5!
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 10},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 10},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 10},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 10},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 10},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 10}
+                {"descripcion": "Luces y señalización", "puntuacion": 4},  # < 5!
+                {"descripcion": "Frenos", "puntuacion": 10},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 10},
+                {"descripcion": "Chasis y estructura", "puntuacion": 10},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
             ]
         }
-        client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
+        inspeccion_id = response_inspeccion.get_json()['id']
         
         # Cerrar CON observación
         data_close = {"observacion": "Frenos delanteros insuficientes, requiere reemplazo"}
@@ -426,29 +402,23 @@ def test_close_inspection_caso_borde_80_puntos(client, app, setup_data):
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
+        # Crear inspección con 80 puntos y todos los items >= 5
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Total = 80 (puntuación perfecta) con todos los items >= 5
-        data_chequeos = {
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 10},
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 10},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 10},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 10},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 10},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 10},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 10}
+                {"descripcion": "Luces y señalización", "puntuacion": 10},
+                {"descripcion": "Frenos", "puntuacion": 10},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 10},
+                {"descripcion": "Chasis y estructura", "puntuacion": 10},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
             ]
         }
-        
-        client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
+        inspeccion_id = response_inspeccion.get_json()['id']
         
         # Cerrar sin observación (ya que debería ser SEGURO)
         response = client.patch(f'/api/inspections/{inspeccion_id}', json={}, headers=headers)
@@ -466,33 +436,25 @@ def test_close_inspection_80_puntos_con_item_bajo(client, app, setup_data):
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
-            "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
         # Nota: Es matemáticamente imposible llegar a exactamente 80 puntos con un item < 5
         # porque 7 items * 10 puntos = 70, más 1 item < 5 = máximo 74 puntos
-        # Pero podemos usar valores intermedios para ilustrar el caso
-        # Ejemplo: total alto pero un item < 5
-        data_chequeos = {
+        # Este test ilustra que incluso con total alto, un item < 5 → RECHEQUEAR
+        data = {
+            "turno_id": setup_data["turno_id"],
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 4},  # < 5!
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 10},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 10},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 10},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 10},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 10},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 10},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 10}
+                {"descripcion": "Luces y señalización", "puntuacion": 4},  # < 5!
+                {"descripcion": "Frenos", "puntuacion": 10},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 10},
+                {"descripcion": "Chasis y estructura", "puntuacion": 10},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 10},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 10}
             ]
         }
-        # Total = 74 (no 80), pero ilustra que incluso con total alto, un item < 5 → RECHEQUEAR
-        
-        client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
+        inspeccion_id = response_inspeccion.get_json()['id']
         
         # Cerrar CON observación
         data_close = {"observacion": "Los frenos no cumplen con el estándar mínimo requerido"}
@@ -510,28 +472,23 @@ def test_close_inspection_caso_borde_40_puntos(client, app, setup_data):
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
+        # Crear inspección con total = 40
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
-        }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
-        inspeccion_id = response_inspeccion.get_json()['id']
-        
-        # Total = 40
-        data_chequeos = {
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": 1, "descripcion": "Frenos", "puntuacion": 5},
-                {"item_numero": 2, "descripcion": "Luces", "puntuacion": 5},
-                {"item_numero": 3, "descripcion": "Neumáticos", "puntuacion": 5},
-                {"item_numero": 4, "descripcion": "Dirección", "puntuacion": 5},
-                {"item_numero": 5, "descripcion": "Suspensión", "puntuacion": 5},
-                {"item_numero": 6, "descripcion": "Motor", "puntuacion": 5},
-                {"item_numero": 7, "descripcion": "Chasis", "puntuacion": 5},
-                {"item_numero": 8, "descripcion": "Emisiones", "puntuacion": 5}
+                {"descripcion": "Luces y señalización", "puntuacion": 5},
+                {"descripcion": "Frenos", "puntuacion": 5},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 5},
+                {"descripcion": "Neumáticos", "puntuacion": 5},
+                {"descripcion": "Chasis y estructura", "puntuacion": 5},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 5},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 5},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 5}
             ]
         }
-        client.post(f'/api/inspections/{inspeccion_id}/chequeos', json=data_chequeos, headers=headers)
+        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
+        inspeccion_id = response_inspeccion.get_json()['id']
         
         # Cerrar CON observación
         data_close = {"observacion": "Puntuación mínima aceptable, requiere monitoreo"}
@@ -540,7 +497,7 @@ def test_close_inspection_caso_borde_40_puntos(client, app, setup_data):
         assert response.status_code == 200
         response_data = response.get_json()
         assert response_data['puntuacion_total'] == 40
-        # Regla: <40 → RECHEQUEAR, pero =40 cae en el else (no <40 pero tampoco >80)
+        # Regla: <40 → RECHEQUEAR, pero =40 cae en el else (no <40 pero tampoco >=80)
         assert response_data['resultado'] == 'RECHEQUEAR'
 
 
@@ -554,12 +511,22 @@ def test_get_inspection_success(client, app, setup_data):
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
+        # Crear inspección completa
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
+            "inspector_id": setup_data["inspector_id"],
+            "chequeos": [
+                {"descripcion": "Luces y señalización", "puntuacion": 9},
+                {"descripcion": "Frenos", "puntuacion": 8},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 7},
+                {"descripcion": "Chasis y estructura", "puntuacion": 9},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 8},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 9}
+            ]
         }
-        response_inspeccion = client.post('/api/inspections', json=data_inspeccion, headers=headers)
+        response_inspeccion = client.post('/api/inspections', json=data, headers=headers)
         inspeccion_id = response_inspeccion.get_json()['id']
         
         # Obtener inspección
@@ -581,12 +548,22 @@ def test_list_inspections_by_vehiculo(client, app, setup_data):
         token = get_auth_token(client, app, "inspector_test@example.com", "password123", "INSPECTOR")
         headers = {'Authorization': f'Bearer {token}'}
         
-        # Crear inspección
-        data_inspeccion = {
+        # Crear inspección completa
+        data = {
             "turno_id": setup_data["turno_id"],
-            "inspector_id": setup_data["inspector_id"]
+            "inspector_id": setup_data["inspector_id"],
+            "chequeos": [
+                {"descripcion": "Luces y señalización", "puntuacion": 9},
+                {"descripcion": "Frenos", "puntuacion": 8},
+                {"descripcion": "Dirección y suspensión", "puntuacion": 10},
+                {"descripcion": "Neumáticos", "puntuacion": 7},
+                {"descripcion": "Chasis y estructura", "puntuacion": 9},
+                {"descripcion": "Contaminación y ruidos", "puntuacion": 8},
+                {"descripcion": "Elementos de seguridad obligatorios", "puntuacion": 10},
+                {"descripcion": "Cinturones, vidrios y espejos", "puntuacion": 9}
+            ]
         }
-        client.post('/api/inspections', json=data_inspeccion, headers=headers)
+        client.post('/api/inspections', json=data, headers=headers)
         
         # Listar inspecciones del vehículo
         response = client.get(f'/api/vehicles/{setup_data["matricula"]}/inspections', headers=headers)
@@ -601,17 +578,19 @@ def test_list_inspections_by_vehiculo(client, app, setup_data):
 # TESTS PARA VERIFICAR JWT Y ROLES
 # ========================================
 
-def test_register_chequeos_without_token(client, app, setup_data):
-    """Test: Registrar chequeos falla sin token JWT"""
+def test_crear_inspeccion_sin_token(client, app, setup_data):
+    """Test: Crear inspección falla sin token JWT"""
     with app.app_context():
-        data_chequeos = {
+        data = {
+            "turno_id": setup_data["turno_id"],
+            "inspector_id": setup_data["inspector_id"],
             "chequeos": [
-                {"item_numero": i, "descripcion": f"Chequeo {i}", "puntuacion": 8}
+                {"descripcion": f"Chequeo {i}", "puntuacion": 8}
                 for i in range(1, 9)
             ]
         }
         
-        response = client.post('/api/inspections/1/chequeos', json=data_chequeos)
+        response = client.post('/api/inspections', json=data)
         
         assert response.status_code == 401
         response_data = response.get_json()

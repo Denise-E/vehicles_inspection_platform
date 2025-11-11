@@ -24,9 +24,11 @@ class InspectionService:
         - El turno debe estar en estado CONFIRMADO
         - El turno no debe tener ya una inspección
         - El inspector debe existir y tener rol INSPECTOR
+        - Debe proporcionar los 8 chequeos
         """
         turno_id = data["turno_id"]
         inspector_id = data["inspector_id"]
+        chequeos_data = data["chequeos"]
         
         # Verificar que el turno existe
         turno = Turno.query.filter_by(id=turno_id).first()
@@ -52,69 +54,36 @@ class InspectionService:
         if inspector.rol.nombre != 'INSPECTOR':
             raise ValueError(f"El usuario {inspector_id} no tiene rol INSPECTOR")
         
-        # Obtener el vehículo del turno
+        if len(chequeos_data) != 8:
+            raise ValueError("Debe proporcionar la totalidad de los chequeos")
+        
         vehiculo = turno.vehiculo
         
-        # Crear la inspección
         new_inspection = Inspeccion(
             vehiculo_id=vehiculo.id,
             turno_id=turno_id,
             inspector_id=inspector_id,
             fecha=datetime.utcnow(),
             puntuacion_total=0,
-            estado='PENDIENTE'
+            estado='EN_PROCESO'  
         )
         
         db.session.add(new_inspection)
-        db.session.commit()
-        db.session.refresh(new_inspection, ['vehiculo', 'inspector', 'turno'])
+        db.session.flush() 
         
-        return new_inspection
-    
-    @staticmethod
-    def register_chequeos(inspeccion_id: int, chequeos_data: list[dict]) -> Inspeccion:
-        """
-        Registra los 8 chequeos de una inspección.
-        
-        Validaciones:
-        - La inspección debe existir
-        - La inspección debe estar en estado PENDIENTE
-        - Debe haber exactamente 8 chequeos
-        - Cada chequeo debe tener puntuación 1-10
-        """
-        # Verificar que la inspección existe
-        inspeccion = Inspeccion.query.filter_by(id=inspeccion_id).first()
-        if not inspeccion:
-            raise ValueError(f"Inspección con ID {inspeccion_id} no encontrada")
-        
-        # Verificar que está en estado PENDIENTE
-        if inspeccion.estado != 'PENDIENTE':
-            raise ValueError("Solo se pueden registrar chequeos en inspecciones PENDIENTE")
-        
-        # Verificar que no tiene chequeos previos
-        if len(inspeccion.chequeos) > 0:
-            raise ValueError("Esta inspección ya tiene chequeos registrados")
-        
-        # Verificar que son exactamente 8 chequeos
-        if len(chequeos_data) != 8:
-            raise ValueError("Debe proporcionar exactamente 8 chequeos")
-        
-        # Crear los chequeos
         for chequeo_data in chequeos_data:
             chequeo = Chequeo(
-                inspeccion_id=inspeccion_id,
-                fecha=datetime.utcnow(),
-                puntuacion=chequeo_data["puntuacion"]
+                inspeccion_id=new_inspection.id,
+                descripcion=chequeo_data["descripcion"],
+                puntuacion=chequeo_data["puntuacion"],
+                fecha=datetime.utcnow()
             )
             db.session.add(chequeo)
         
-        # Actualizar estado de la inspección
-        inspeccion.estado = 'EN_PROCESO'
-        
         db.session.commit()
-        db.session.refresh(inspeccion, ['chequeos', 'vehiculo', 'inspector', 'turno'])
+        db.session.refresh(new_inspection, ['chequeos', 'vehiculo', 'inspector', 'turno'])
         
-        return inspeccion
+        return new_inspection
     
     @staticmethod
     def close_inspection(inspeccion_id: int, observacion: str | None = None) -> Inspeccion:

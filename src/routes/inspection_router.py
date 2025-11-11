@@ -2,7 +2,6 @@ from flask import Blueprint
 from src.utils.jwt_utils import token_required, role_required
 from src.controllers.inspection_controller import (
     create_inspection,
-    register_chequeos,
     close_inspection,
     get_inspection,
     list_all_inspections
@@ -16,7 +15,7 @@ inspections = Blueprint('inspections', __name__)
 @role_required('ADMIN', 'INSPECTOR')
 def crear():
     """
-    Crear una nueva inspección
+    Crear una inspección completa con sus 8 chequeos
     ---
     tags:
       - Inspecciones
@@ -31,119 +30,56 @@ def crear():
           required:
             - turno_id
             - inspector_id
+            - chequeos
           properties:
             turno_id:
               type: integer
               example: 1
-              description: ID del turno para el cual se crea la inspección
+              description: ID del turno confirmado para el cual se crea la inspección
             inspector_id:
               type: integer
               example: 2
-              description: ID del inspector que realizará la inspección
-    responses:
-      201:
-        description: Inspección creada exitosamente
-        schema:
-          type: object
-          properties:
-            id:
-              type: integer
-            turno_id:
-              type: integer
-            vehiculo_matricula:
-              type: string
-            inspector_nombre:
-              type: string
-            fecha:
-              type: string
-              format: date-time
-            puntuacion_total:
-              type: integer
-            resultado:
-              type: string
-            observacion:
-              type: string
-            estado:
-              type: string
-      400:
-        description: Error en los datos proporcionados
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-      401:
-        description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-      403:
-        description: Usuario sin permisos (no es INSPECTOR)
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-    """
-    return create_inspection()
-
-
-@inspections.route("/<int:inspeccion_id>/chequeos", methods=['POST'])
-@token_required
-@role_required('ADMIN', 'INSPECTOR')
-def registrar_chequeos(inspeccion_id: int):
-    """
-    Registrar los 8 chequeos de una inspección
-    ---
-    tags:
-      - Inspecciones
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: inspeccion_id
-        type: integer
-        required: true
-        description: ID de la inspección
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          required:
-            - chequeos
-          properties:
+              description: ID del inspector que realizó la inspección
             chequeos:
               type: array
               minItems: 8
               maxItems: 8
+              description: Los 8 chequeos de la inspección técnica vehicular
               items:
                 type: object
                 required:
-                  - item_numero
                   - descripcion
                   - puntuacion
                 properties:
-                  item_numero:
-                    type: integer
-                    minimum: 1
-                    maximum: 8
-                    example: 1
                   descripcion:
                     type: string
-                    minLength: 3
                     maxLength: 200
-                    example: "Frenos delanteros"
+                    description: Descripción del chequeo
                   puntuacion:
                     type: integer
                     minimum: 1
                     maximum: 10
-                    example: 8
+                    description: Puntuación del chequeo (1-10)
+              example:
+                - descripcion: "Luces y señalización"
+                  puntuacion: 9
+                - descripcion: "Frenos"
+                  puntuacion: 8
+                - descripcion: "Dirección y suspensión"
+                  puntuacion: 10
+                - descripcion: "Neumáticos"
+                  puntuacion: 7
+                - descripcion: "Chasis y estructura"
+                  puntuacion: 9
+                - descripcion: "Contaminación y ruidos"
+                  puntuacion: 8
+                - descripcion: "Elementos de seguridad obligatorios"
+                  puntuacion: 10
+                - descripcion: "Cinturones, vidrios y espejos"
+                  puntuacion: 9
     responses:
-      200:
-        description: Chequeos registrados exitosamente
+      201:
+        description: Inspección creada exitosamente con sus 8 chequeos
         schema:
           type: object
           properties:
@@ -160,12 +96,30 @@ def registrar_chequeos(inspeccion_id: int):
               format: date-time
             puntuacion_total:
               type: integer
+              description: Suma inicial (0) - se calcula al cerrar la inspección
             resultado:
               type: string
+              nullable: true
             observacion:
               type: string
+              nullable: true
             estado:
               type: string
+              example: "EN_PROCESO"
+            chequeos:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  descripcion:
+                    type: string
+                  puntuacion:
+                    type: integer
+                  fecha:
+                    type: string
+                    format: date-time
       400:
         description: Error en los datos proporcionados
         schema:
@@ -175,22 +129,10 @@ def registrar_chequeos(inspeccion_id: int):
               type: string
       401:
         description: Token no proporcionado o inválido
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
       403:
-        description: Usuario sin permisos (no es INSPECTOR)
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
+        description: Usuario sin permisos (solo ADMIN e INSPECTOR)
     """
-    return register_chequeos(inspeccion_id)
-
-
+    return create_inspection()
 
 
 @inspections.route("/<int:inspeccion_id>", methods=['GET'])
@@ -245,8 +187,6 @@ def detalle(inspeccion_id: int):
                 properties:
                   id:
                     type: integer
-                  item_numero:
-                    type: integer
                   descripcion:
                     type: string
                   puntuacion:
@@ -280,7 +220,7 @@ def cerrar(inspeccion_id: int):
     Cerrar una inspección y calcular resultado
     
     Reglas de negocio:
-    - SEGURO: suma > 80 y ningún chequeo < 5
+    - SEGURO: suma >= 80 y ningún chequeo < 5
     - RECHEQUEAR: suma < 40 o algún chequeo < 5
     - Si RECHEQUEAR, observación es obligatoria (mínimo 10 caracteres)
     ---
@@ -337,8 +277,6 @@ def cerrar(inspeccion_id: int):
                 type: object
                 properties:
                   id:
-                    type: integer
-                  item_numero:
                     type: integer
                   descripcion:
                     type: string

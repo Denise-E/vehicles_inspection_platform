@@ -116,6 +116,7 @@ CREATE TABLE chequeo (
     id INT AUTO_INCREMENT PRIMARY KEY,
     inspeccion_id INT,
     fecha DATETIME NOT NULL,
+    descripcion VARCHAR(200) NOT NULL,
     puntuacion INT CHECK (puntuacion BETWEEN 1 AND 10),
     FOREIGN KEY (inspeccion_id) REFERENCES inspeccion(id)
         ON DELETE CASCADE
