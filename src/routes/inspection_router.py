@@ -108,10 +108,10 @@ def crear():
             puntuacion_total:
               type: integer
               description: Suma total de las puntuaciones de los 8 chequeos
-             resultado:
-               type: string
-               enum: [SEGURO, RECHEQUEAR]
-               description: "SEGURO si 40 ≤ puntos ≤ 80 Y todos >= 5, sino RECHEQUEAR"
+            resultado:
+              type: string
+              enum: [SEGURO, RECHEQUEAR]
+              description: "SEGURO si 40 ≤ puntos ≤ 80 Y todos >= 5, sino RECHEQUEAR"
             observacion:
               type: string
               description: "Observación obligatoria para resultado RECHEQUEAR"
