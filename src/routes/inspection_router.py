@@ -110,9 +110,6 @@ def crear():
             observacion:
               type: string
               description: "Observación obligatoria para resultado RECHEQUEAR"
-            estado:
-              type: string
-              example: "COMPLETADA"
             chequeos:
               type: array
               items:
@@ -184,8 +181,6 @@ def detalle(inspeccion_id: int):
             resultado:
               type: string
             observacion:
-              type: string
-            estado:
               type: string
             chequeos:
               type: array
@@ -259,8 +254,6 @@ def listar_todas():
                   resultado:
                     type: string
                   observacion:
-                    type: string
-                  estado:
                     type: string
             total:
               type: integer

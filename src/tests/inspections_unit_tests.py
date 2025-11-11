@@ -199,7 +199,6 @@ def test_create_inspection_resultado_seguro(client, app, setup_data):
         response_data = response.get_json()
         assert response_data['turno_id'] == setup_data["turno_id"]
         assert response_data['vehiculo_matricula'] == setup_data["matricula"]
-        assert response_data['estado'] == 'COMPLETADA'
         assert response_data['resultado'] == 'SEGURO'
         assert response_data['puntuacion_total'] == 80
         assert 'id' in response_data
@@ -329,7 +328,6 @@ def test_create_inspection_resultado_rechequear_por_total_bajo(client, app, setu
         response_data = response.get_json()
         assert response_data['resultado'] == 'RECHEQUEAR'
         assert response_data['puntuacion_total'] == 34
-        assert response_data['estado'] == 'COMPLETADA'
         assert response_data['observacion'] is not None
 
 
@@ -361,7 +359,6 @@ def test_create_inspection_resultado_rechequear_por_item_bajo(client, app, setup
         response_data = response.get_json()
         assert response_data['resultado'] == 'RECHEQUEAR'
         assert response_data['puntuacion_total'] == 74
-        assert response_data['estado'] == 'COMPLETADA'
 
 
 def test_create_inspection_caso_borde_80_puntos(client, app, setup_data):
@@ -392,7 +389,6 @@ def test_create_inspection_caso_borde_80_puntos(client, app, setup_data):
         assert response_data['puntuacion_total'] == 80
         # Regla: >= 80 Y todos >= 5 → SEGURO
         assert response_data['resultado'] == 'SEGURO'
-        assert response_data['estado'] == 'COMPLETADA'
 
 
 def test_create_inspection_80_puntos_con_item_bajo(client, app, setup_data):
@@ -423,7 +419,6 @@ def test_create_inspection_80_puntos_con_item_bajo(client, app, setup_data):
         response_data = response.get_json()
         assert response_data['puntuacion_total'] == 74
         assert response_data['resultado'] == 'RECHEQUEAR'
-        assert response_data['estado'] == 'COMPLETADA'
 
 
 def test_create_inspection_caso_borde_40_puntos(client, app, setup_data):
@@ -455,7 +450,6 @@ def test_create_inspection_caso_borde_40_puntos(client, app, setup_data):
         assert response_data['puntuacion_total'] == 40
         # Regla: <40 → RECHEQUEAR, pero =40 cae en el else (no <40 pero tampoco >=80)
         assert response_data['resultado'] == 'RECHEQUEAR'
-        assert response_data['estado'] == 'COMPLETADA'
 
 
 # ========================================

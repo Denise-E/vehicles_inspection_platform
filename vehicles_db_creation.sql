@@ -100,7 +100,6 @@ CREATE TABLE inspeccion (
     puntuacion_total INT DEFAULT 0,
     resultado_id INT,
     observacion TEXT,
-    estado VARCHAR(50),
     FOREIGN KEY (vehiculo_id) REFERENCES vehiculo(id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,

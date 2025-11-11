@@ -51,7 +51,6 @@ class InspectionResponse(BaseModel):
     puntuacion_total: int
     resultado: str | None
     observacion: str | None
-    estado: str
 
 
 class InspectionDetailResponse(BaseModel):
@@ -65,7 +64,6 @@ class InspectionDetailResponse(BaseModel):
     puntuacion_total: int
     resultado: str | None
     observacion: str | None
-    estado: str
     chequeos: list[ChequeoResponse]
 
 

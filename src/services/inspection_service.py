@@ -112,8 +112,7 @@ class InspectionService:
             fecha=datetime.utcnow(),
             puntuacion_total=puntuacion_total,
             resultado_id=resultado.id,
-            observacion=observacion,
-            estado='COMPLETADA'
+            observacion=observacion
         )
         
         db.session.add(new_inspection)

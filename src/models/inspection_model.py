@@ -13,7 +13,6 @@ class Inspeccion(db.Model):
     puntuacion_total = db.Column(db.Integer, default=0)
     resultado_id = db.Column(db.Integer, db.ForeignKey("resultado_inspeccion.id"))
     observacion = db.Column(db.Text)
-    estado = db.Column(db.String(50))
 
     vehiculo = db.relationship("Vehiculo", back_populates="inspecciones")
     turno = db.relationship("Turno", back_populates="inspeccion")

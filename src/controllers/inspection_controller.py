@@ -38,7 +38,6 @@ def create_inspection() -> Tuple[dict, int]:
             "puntuacion_total": inspection.puntuacion_total,
             "resultado": inspection.resultado.nombre if inspection.resultado else None,
             "observacion": inspection.observacion,
-            "estado": inspection.estado,
             "chequeos": chequeos_response
         }
         response = InspectionDetailResponse(**response_data)
@@ -74,7 +73,6 @@ def get_inspection(inspeccion_id: int) -> Tuple[dict, int]:
             "puntuacion_total": inspection.puntuacion_total,
             "resultado": inspection.resultado.nombre if inspection.resultado else None,
             "observacion": inspection.observacion,
-            "estado": inspection.estado,
             "chequeos": chequeos_response
         }
         response = InspectionDetailResponse(**response_data)
@@ -107,8 +105,7 @@ def list_inspections_by_vehiculo(matricula: str) -> Tuple[dict, int]:
                 "fecha": inspection.fecha,
                 "puntuacion_total": inspection.puntuacion_total,
                 "resultado": inspection.resultado.nombre if inspection.resultado else None,
-                "observacion": inspection.observacion,
-                "estado": inspection.estado
+                "observacion": inspection.observacion
             })
         
         response_data = {
@@ -145,8 +142,7 @@ def list_inspections_by_inspector(inspector_id: int) -> Tuple[dict, int]:
                 "fecha": inspection.fecha,
                 "puntuacion_total": inspection.puntuacion_total,
                 "resultado": inspection.resultado.nombre if inspection.resultado else None,
-                "observacion": inspection.observacion,
-                "estado": inspection.estado
+                "observacion": inspection.observacion
             })
         
         response_data = {
@@ -175,8 +171,7 @@ def list_all_inspections() -> Tuple[dict, int]:
                 "fecha": inspection.fecha,
                 "puntuacion_total": inspection.puntuacion_total,
                 "resultado": inspection.resultado.nombre if inspection.resultado else None,
-                "observacion": inspection.observacion,
-                "estado": inspection.estado
+                "observacion": inspection.observacion
             })
         
         response_data = {
