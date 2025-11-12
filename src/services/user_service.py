@@ -33,9 +33,6 @@ class UserService:
 
         db.session.add(new_user)
         db.session.commit()
-        db.session.refresh(new_user)
-        
-        # Carga la relación del rol para poder acceder al nombre
         db.session.refresh(new_user, ['rol'])
         return new_user
 
