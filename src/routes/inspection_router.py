@@ -223,10 +223,14 @@ def detalle(inspeccion_id: int):
 
 @inspections.route("", methods=['GET'])
 @token_required
-@role_required('ADMIN')
+@role_required('ADMIN', 'INSPECTOR')
 def listar_todas():
     """
-    Listar todas las inspecciones del sistema
+    Listar inspecciones según el rol del usuario
+    
+    Autorización:
+    - ADMIN: puede ver todas las inspecciones del sistema
+    - INSPECTOR: solo puede ver las inspecciones que él mismo ha realizado
     ---
     tags:
       - Inspecciones
@@ -234,7 +238,7 @@ def listar_todas():
       - Bearer: []
     responses:
       200:
-        description: Lista de todas las inspecciones
+        description: Lista de inspecciones 
         schema:
           type: object
           properties:
@@ -264,6 +268,13 @@ def listar_todas():
               type: integer
       401:
         description: Token no proporcionado o inválido
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+      403:
+        description: Usuario sin permisos (solo ADMIN e INSPECTOR)
         schema:
           type: object
           properties:

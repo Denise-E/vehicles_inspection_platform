@@ -158,8 +158,23 @@ def list_inspections_by_inspector(inspector_id: int) -> Tuple[dict, int]:
 
 
 def list_all_inspections() -> Tuple[dict, int]:
+    """
+    Lista las inspecciones según el rol del usuario:
+    - ADMIN: todas las inspecciones del sistema
+    - INSPECTOR: solo las inspecciones realizadas por el inspector logueado
+    """
     try:
-        inspections = InspectionService.list_all_inspections()
+        user_id = request.current_user['user_id']
+        user_role = request.current_user['role']
+        
+        if user_role == 'INSPECTOR':
+            inspections = InspectionService.list_inspections_by_inspector(
+                inspector_id=user_id, 
+                user_id=user_id, 
+                user_role=user_role
+            )
+        else:
+            inspections = InspectionService.list_all_inspections()
         
         inspections_data = []
         for inspection in inspections:
